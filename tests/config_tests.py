@@ -46,9 +46,6 @@ class ParseConfigFileTestCase(unittest.TestCase):
                               handle.name)
 
 
-
-
-
 class GetRegionTestCase(unittest.TestCase):
 
     def test_parsing_file(self):
@@ -176,7 +173,6 @@ class GetCredentialsTestCase(unittest.TestCase):
 class GetTestCase(unittest.TestCase):
 
     def test_with_valid_config(self):
-
         cfg = {
             'default': {
                 'region': uuid.uuid4().hex
@@ -205,3 +201,64 @@ class GetTestCase(unittest.TestCase):
         self.assertEqual(cfg['default']['region'], region)
         self.assertEqual(creds['default']['aws_access_key_id'], access_key)
         self.assertEqual(creds['default']['aws_secret_access_key'], secret_key)
+
+    def test_with_valid_config_non_default_profile(self):
+        cfg = {
+            'foo': {
+                'region': uuid.uuid4().hex
+            }
+        }
+
+        creds = {
+            'foo': {
+                'aws_access_key_id': uuid.uuid4().hex,
+                'aws_secret_access_key': uuid.uuid4().hex
+            }
+        }
+
+        os.environ['AWS_DEFAULT_PROFILE'] = 'foo'
+        with tempfile.NamedTemporaryFile() as config_handle:
+            config_handle.write(build_ini(cfg))
+            config_handle.flush()
+            os.environ['AWS_CONFIG_FILE'] = config_handle.name
+
+            with tempfile.NamedTemporaryFile() as handle:
+                handle.write(build_ini(creds))
+                handle.flush()
+                os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
+
+                region, access_key, secret_key = config.get()
+
+        self.assertEqual(cfg['foo']['region'], region)
+        self.assertEqual(creds['foo']['aws_access_key_id'], access_key)
+        self.assertEqual(creds['foo']['aws_secret_access_key'], secret_key)
+
+    def test_with_valid_config_specified_profile(self):
+        cfg = {
+            'foo': {
+                'region': uuid.uuid4().hex
+            }
+        }
+
+        creds = {
+            'foo': {
+                'aws_access_key_id': uuid.uuid4().hex,
+                'aws_secret_access_key': uuid.uuid4().hex
+            }
+        }
+
+        with tempfile.NamedTemporaryFile() as config_handle:
+            config_handle.write(build_ini(cfg))
+            config_handle.flush()
+            os.environ['AWS_CONFIG_FILE'] = config_handle.name
+
+            with tempfile.NamedTemporaryFile() as handle:
+                handle.write(build_ini(creds))
+                handle.flush()
+                os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
+
+                region, access_key, secret_key = config.get('foo')
+
+        self.assertEqual(cfg['foo']['region'], region)
+        self.assertEqual(creds['foo']['aws_access_key_id'], access_key)
+        self.assertEqual(creds['foo']['aws_secret_access_key'], secret_key)
