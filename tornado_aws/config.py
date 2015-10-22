@@ -46,6 +46,11 @@ def _get_credentials(profile):
     :raises: NoCredentialsError
 
     """
+    access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    if access_key and secret_key:
+        return access_key, secret_key
+
     file_path = os.getenv('AWS_SHARED_CREDENTIALS_FILE', '~/.aws/credentials')
     config = _parse_file(file_path)
     if profile not in config:

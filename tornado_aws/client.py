@@ -1,5 +1,8 @@
 """
-The AWS ...
+The :py:class:`AWSClient` and :py:class:`AsyncAWSClient` implement low-level
+AWS clients. The clients provide only the mechanism for submitted signed HTTP
+requests to the AWS APIs and are generally meant to be used by service specific
+client API implementations.
 
 """
 import datetime
@@ -36,10 +39,26 @@ class AWSClient(object):
     <http://docs.aws.amazon.com/general/latest/gr/Welcome.html>`_.
 
     The AWS configuration profile can be set when creating the
-    :py:class:`AWSClient` instance or by setting the ``AWS_DEFAULT_PROFILE``
+    ``AWSClient`` instance or by setting the ``AWS_DEFAULT_PROFILE``
     environment variable. If neither are set, ``default`` will be used.
 
-    The AWS region can be specified when creating a new instance or
+    The AWS access key can be set when creating a new instance. If it's not
+    passed in when creating the ``AWSClient``, the client will attempt to
+    get the key from the ``AWS_ACCESS_KEY_ID`` environment variable. If that is
+    not set, it will attempt to get the key from the AWS CLI credentials file.
+    The path to the credentials file can be overridden in the
+    ``AWS_SHARED_CREDENTIALS_FILE`` environment variable. Note that a value
+    set in ``AWS_ACCESS_KEY_ID`` will only be used if there is an accompanying
+    value in ``AWS_SECRET_ACCESS_KEY`` environment variable.
+
+    Like the access key, the secret key can be set when creating a new client
+    instance. The configuration logic matches the access key with the exception
+    of the environment variable. The secret key can set in the
+    ``AWS_SECRET_ACCESS_KEY`` environment variable.
+
+    The ``endpoint`` argument is primarily used for testing and allows for
+    the use of a specified base URL value instead of the auto-construction of
+    a URL using the service and region variables.
 
     :param str service: The service for the API calls
     :param str profile: Specify the configuration profile name
@@ -67,7 +86,7 @@ class AWSClient(object):
         self._endpoint_url = self._endpoint(endpoint)
         self._host = self._hostname(self._endpoint_url)
 
-    def fetch(self, method, path='/', query_args=None, headers=None, body=None,
+    def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
               raise_error=False):
         """Executes a request, returning an
         :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
@@ -80,7 +99,7 @@ class AWSClient(object):
         :param str path: The request path
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
-        :param str body: The request body
+        :param bytes body: The request body
         :rtype: :py:class:`tornado.httpclient.HTTPResponse`
 
         """
@@ -191,7 +210,7 @@ class AWSClient(object):
         :param str path: The request path
         :param dict query_args: Query string args
         :param dict headers: Request headers
-        :param str body: The request body
+        :param bytes body: The request body
         :rtype: dict
 
         """
@@ -207,7 +226,7 @@ class AWSClient(object):
         payload_hash = hashlib.sha256(body).hexdigest()
 
         headers.update({
-            'Content-Length': len(body or b''),
+            'Content-Length': len(body),
             'Date': amz_date,
             'Host': self._host,
             'X-Amz-Content-sha256': payload_hash
@@ -288,13 +307,44 @@ class AWSClient(object):
 
 
 class AsyncAWSClient(AWSClient):
-    """Implement an asynchronous low level AWS client that performs the request
-    signing required for AWS API requests.
+    """Implement a low level AWS client that performs the request signing
+    required for AWS API requests.
 
+    ``AWSClient`` uses the same configuration method and environment
+    variables as the AWS CLI. For configuration information visit the "Getting
+    Set Up" section of the `AWS Command Line Interface user guide
+    <http://docs.aws.amazon.com/cli/latest/userguide/>`_.
 
-    The keyword argument ``max_clients`` determines the maximum number of
-    simultaneous :py:meth:`fetch() <AsyncAWSWait.fetch>` operations that can
-    execute in parallel on each :py:class:`IOLoop <tornado.ioloop.IOLoop>`.
+    When creating the ``AWSClient`` instance you need to specify the
+    ``service`` that you will be interacting with. This value is used when
+    signing the request headers and must match the service values as specified
+    in the `AWS General Reference documentation
+    <http://docs.aws.amazon.com/general/latest/gr/Welcome.html>`_.
+
+    The AWS configuration profile can be set when creating the
+    ``AWSClient`` instance or by setting the ``AWS_DEFAULT_PROFILE``
+    environment variable. If neither are set, ``default`` will be used.
+
+    The AWS access key can be set when creating a new instance. If it's not
+    passed in when creating the ``AWSClient``, the client will attempt to
+    get the key from the ``AWS_ACCESS_KEY_ID`` environment variable. If that is
+    not set, it will attempt to get the key from the AWS CLI credentials file.
+    The path to the credentials file can be overridden in the
+    ``AWS_SHARED_CREDENTIALS_FILE`` environment variable. Note that a value
+    set in ``AWS_ACCESS_KEY_ID`` will only be used if there is an accompanying
+    value in ``AWS_SECRET_ACCESS_KEY`` environment variable.
+
+    Like the access key, the secret key can be set when creating a new client
+    instance. The configuration logic matches the access key with the exception
+    of the environment variable. The secret key can set in the
+    ``AWS_SECRET_ACCESS_KEY`` environment variable.
+
+    The ``endpoint`` argument is primarily used for testing and allows for
+    the use of a specified base URL value instead of the auto-construction of
+    a URL using the service and region variables.
+
+    ``max_clients`` allows for the specification of the maximum number if
+    concurrent asynchronous HTTP requests that the client will perform.
 
     :param str service: The service for the API calls
     :param str profile: Specify the configuration profile name
