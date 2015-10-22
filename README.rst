@@ -1,5 +1,6 @@
 tornado-aws
 ===========
+A low-level Amazon Web Services API client for Tornado
 
 |Version| |Downloads| |Status| |Coverage| |License|
 
