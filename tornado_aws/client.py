@@ -82,14 +82,15 @@ class AWSClient(object):
         :param dict headers: Request headers
         :param str body: The request body
         :rtype: :py:class:`tornado.httpclient.HTTPResponse`
-        :raises: :py:class:`tornado.httpclient.HTTPError`
 
         """
         signed_headers, signed_url = \
             self._signed_request(method, path, query_args or {}, dict(headers),
                                  body)
         request = httpclient.HTTPRequest(signed_url, method,
-                                         signed_headers, body)
+                                         signed_headers, body,
+                                         connect_timeout=self.CONNECT_TIMEOUT,
+                                         request_timeout=self.REQUEST_TIMEOUT)
         adapter = self._get_client_adapter()
         response = adapter.fetch(request, raise_error=raise_error)
         adapter.close()
