@@ -1,0 +1,26 @@
+sudo: false
+language: python
+python:
+  - 2.7
+  - pypy
+  - 3.3
+  - 3.4
+  - 3.5
+install:
+  - pip install -r requirements.txt --download-cache $HOME/.pip-cache
+  - pip install -r test-requirements.txt --download-cache $HOME/.pip-cache
+script: nosetests
+after_success:
+  - codecov
+deploy:
+  distributions: sdist bdist_wheel
+  provider: pypi
+  user: crad
+  on:
+    python: 2.7
+    tags: true
+    all_branches: true
+  password: none
+cache:
+  directories:
+    - $HOME/.pip-cache/
