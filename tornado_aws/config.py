@@ -10,7 +10,7 @@ import logging
 from os import path
 import os
 
-from awsclient import exceptions
+from tornado_aws import exceptions
 
 LOGGER = logging.getLogger(__name__)
 

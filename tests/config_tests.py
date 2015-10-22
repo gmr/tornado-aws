@@ -1,22 +1,12 @@
-import io
 import os
 import tempfile
 import unittest
 import uuid
 
-from awsclient import config
-from awsclient import exceptions
+from tornado_aws import config
+from tornado_aws import exceptions
 
-
-def build_ini(values):
-    output = io.BytesIO()
-    for section in values:
-        output.write('[{}]\n'.format(section).encode('utf-8'))
-        for key in values[section]:
-            output.write('{0}={1}\n'.format(
-                key, values[section][key]).encode('utf-8'))
-    output.seek(0)
-    return output.read()
+from . import utils
 
 
 class ParseConfigFileTestCase(unittest.TestCase):
@@ -33,7 +23,7 @@ class ParseConfigFileTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             value = config._parse_file(handle.name)
             self.assertDictEqual(expectation, value)
@@ -55,7 +45,7 @@ class GetRegionTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_CONFIG_FILE'] = handle.name
             value = config._get_region('default')
@@ -71,7 +61,7 @@ class GetRegionTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_CONFIG_FILE'] = handle.name
             value = config._get_region('foo')
@@ -84,7 +74,7 @@ class GetRegionTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_CONFIG_FILE'] = handle.name
             self.assertRaises(exceptions.NoProfileError,
@@ -106,7 +96,7 @@ class GetCredentialsTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
             access_key, secret_key = config._get_credentials('default')
@@ -127,7 +117,7 @@ class GetCredentialsTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
             access_key, secret_key = config._get_credentials('foo')
@@ -144,7 +134,7 @@ class GetCredentialsTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
             self.assertRaises(exceptions.NoProfileError,
@@ -158,7 +148,7 @@ class GetCredentialsTestCase(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as handle:
-            handle.write(build_ini(expectation))
+            handle.write(utils.build_ini(expectation))
             handle.flush()
             os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
             self.assertRaises(exceptions.NoCredentialsError,
@@ -187,12 +177,12 @@ class GetTestCase(unittest.TestCase):
         }
 
         with tempfile.NamedTemporaryFile() as config_handle:
-            config_handle.write(build_ini(cfg))
+            config_handle.write(utils.build_ini(cfg))
             config_handle.flush()
             os.environ['AWS_CONFIG_FILE'] = config_handle.name
 
             with tempfile.NamedTemporaryFile() as handle:
-                handle.write(build_ini(creds))
+                handle.write(utils.build_ini(creds))
                 handle.flush()
                 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
 
@@ -218,12 +208,12 @@ class GetTestCase(unittest.TestCase):
 
         os.environ['AWS_DEFAULT_PROFILE'] = 'foo'
         with tempfile.NamedTemporaryFile() as config_handle:
-            config_handle.write(build_ini(cfg))
+            config_handle.write(utils.build_ini(cfg))
             config_handle.flush()
             os.environ['AWS_CONFIG_FILE'] = config_handle.name
 
             with tempfile.NamedTemporaryFile() as handle:
-                handle.write(build_ini(creds))
+                handle.write(utils.build_ini(creds))
                 handle.flush()
                 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
 
@@ -248,12 +238,12 @@ class GetTestCase(unittest.TestCase):
         }
 
         with tempfile.NamedTemporaryFile() as config_handle:
-            config_handle.write(build_ini(cfg))
+            config_handle.write(utils.build_ini(cfg))
             config_handle.flush()
             os.environ['AWS_CONFIG_FILE'] = config_handle.name
 
             with tempfile.NamedTemporaryFile() as handle:
-                handle.write(build_ini(creds))
+                handle.write(utils.build_ini(creds))
                 handle.flush()
                 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
 

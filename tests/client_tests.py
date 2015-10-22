@@ -3,9 +3,10 @@ import tempfile
 import unittest
 import uuid
 
-from awsclient import client
+from tornado_aws import client
 
 from . import utils
+
 
 class BaseTestCase(unittest.TestCase):
 
