@@ -1,4 +1,5 @@
 """
+The AWS ...
 
 """
 import hashlib
@@ -7,6 +8,7 @@ import logging
 import time
 from email import utils
 
+from tornado import gen
 from tornado import httpclient
 
 from tornado_aws import config
@@ -20,17 +22,16 @@ class AWSClient(object):
     """Implement a low level AWS client that performs the request signing
     required for AWS API requests.
 
-    :py:class:`AWSClient`` uses the same configuration method and environment
+    ``AWSClient`` uses the same configuration method and environment
     variables as the AWS CLI. For configuration information visit the "Getting
     Set Up" section of the `AWS Command Line Interface user guide
-    <http://docs.aws.amazon.com/cli/latest/userguide/>`_
+    <http://docs.aws.amazon.com/cli/latest/userguide/>`_.
 
-    When creating the :py:class`AWSClient` instance you need to specify the
+    When creating the ``AWSClient`` instance you need to specify the
     ``service`` that you will be interacting with. This value is used when
     signing the request headers and must match the service values as specified
     in the `AWS General Reference documentation
     <http://docs.aws.amazon.com/general/latest/gr/Welcome.html>`_.
-
 
     The AWS configuration profile can be set when creating the
     :py:class:`AWSClient` instance or by setting the ``AWS_DEFAULT_PROFILE``
@@ -38,20 +39,11 @@ class AWSClient(object):
 
     The AWS region can be specified when creating a new instance or
 
-
-
-     ``It will load configuration from ``~/.aws/config`` and
-    ``~/.aws/credentials`` if the paths are not set in ``AWS_CONFIG_FILE`` and
-    ``AWS_SHARED_CREDENTIALS_FILE`` environment files. The ``default`` profile
-    will be used if the  is not set.
-
-    .. _docs:
-
     :param str service: The service for the API calls
     :param str profile: Specify the configuration profile name
-    :param str region:
-    :param str access_key:
-    :param str secret_key:
+    :param str region: The AWS region to make requests to
+    :param str access_key: The access key
+    :param str secret_key: The secret access key
 
     """
     CONNECT_TIMEOUT = 10
@@ -65,13 +57,24 @@ class AWSClient(object):
         self._region, self._access_key, self._secret_key = \
             self._get_config(region, access_key, secret_key)
 
+    def fetch(self, method, uri, headers, body=None, raise_error=None):
+        """Executes a request, returning an
+        :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
 
+        If an error occurs during the fetch, we raise an
+        :py:class:`HTTPError <tornado.httpclient.HTTPError>` unless the
+        ``raise_error`` keyword argument is set to ``False``.
 
-    def fetch(self, method, uri, headers, body=None):
+        :param str method: HTTP request method
+        :param str uri: The request URL
+        :param dict headers: Request headers
+        :param str body: The request body
+        :rtype: :py:class:`tornado.httpclient.HTTPResponse`
+        :raises: :py:class:`tornado.httpclient.HTTPError`
 
-
-
-        pass
+        """
+        request = httpclient.HTTPRequest(uri, method, headers, body)
+        return self._adapter.fetch(request, raise_error=raise_error)
 
     def _get_config(self, region, access_key, secret_key):
         """Get the negotiated configuration, preferring values that were passed
@@ -95,7 +98,7 @@ class AWSClient(object):
     def _get_client_adapter(self):
         """Return a HTTP client
 
-        :rtype: tornado.httpclient.HTTPClient
+        :rtype: :py:class:`tornado.httpclient.HTTPClient`
 
         """
         return httpclient.HTTPClient()
@@ -110,9 +113,21 @@ class AWSClient(object):
         return utils.formatdate(time.time(), usegmt=True)
 
 
-
 class AsyncAWSClient(AWSClient):
-    """
+    """Implement an asynchronous low level AWS client that performs the request
+    signing required for AWS API requests.
+
+
+    The keyword argument ``max_clients`` determines the maximum number of
+    simultaneous :py:meth:`fetch() <AsyncAWSWait.fetch>` operations that can
+    execute in parallel on each :py:class:`IOLoop <tornado.ioloop.IOLoop>`.
+
+    :param str service: The service for the API calls
+    :param str profile: Specify the configuration profile name
+    :param str region: The AWS region to make requests to
+    :param str access_key: The access key
+    :param str secret_key: The secret access key
+    :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
 
     """
     def __init__(self, service, profile=None, region=None, access_key=None,
@@ -121,10 +136,31 @@ class AsyncAWSClient(AWSClient):
         super(AsyncAWSClient, self).__init__(service, profile, region,
                                              access_key, secret_key)
 
+    @gen.coroutine
+    def fetch(self, method, uri, headers, body=None, raise_error=None):
+        """Executes a request, returning an
+        :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
+
+        If an error occurs during the fetch, we raise an
+        :py:class:`HTTPError <tornado.httpclient.HTTPError>` unless the
+        ``raise_error`` keyword argument is set to ``False``.
+
+        :param str method: HTTP request method
+        :param str uri: The request URL
+        :param dict headers: Request headers
+        :param str body: The request body
+        :rtype: :py:class:`tornado.httpclient.HTTPResponse`
+        :raises: :py:class:`tornado.httpclient.HTTPError`
+
+        """
+        request = httpclient.HTTPRequest(uri, method, headers, body)
+        response = yield self._adapter.fetch(request, raise_error=raise_error)
+        raise gen.Return(response)
+
     def _get_client_adapter(self):
         """Return an asynchronous HTTP client adapter
 
-        :rtype: tornado.httpclient.AsyncHTTPClient
+        :rtype: :py:class:`tornado.httpclient.AsyncHTTPClient`
 
         """
         return httpclient.AsyncHTTPClient(max_clients=self._max_clients)

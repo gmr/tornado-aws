@@ -1,9 +1,8 @@
 """
-AWSClient Exceptions
-====================
+The following exceptions may be raised during the corse of using
+:py:class:`tornado_aws.AWSClient` and :py:class:`tornado_aws.AsyncAWSClient`.
 
 """
-
 
 class AWSClientException(Exception):
     """Base exception class for AWSClient
