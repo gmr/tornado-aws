@@ -54,3 +54,5 @@ docs/_build/
 
 .idea
 .vagrant
+
+aws4_testsuite
