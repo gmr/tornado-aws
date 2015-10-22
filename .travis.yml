@@ -17,10 +17,11 @@ deploy:
   provider: pypi
   user: crad
   on:
-    python: 2.7
+    python: 3.5
     tags: true
     all_branches: true
-  password: none
+  password:
+    secure: "vLrbxcVV5K4pccSZY4N+XbsAaBvfOTfQ5rERV+aGjj2jreKND3R5oN9DLgyHJlIy7KAYMcq9PWLjAmG8G6ZCP+hNlwxQWHAS/T/cADj2i2IenJwJpqyikiJ93yX+NIREFB7VRZp8sgnVk8N9F5WnDzJ/v8+ygui/n54aWbMNJI3ggzy83kyOjdwVDuCNAgOpE+vPZUnToXX5cHeudVjKhxZE7l+rCCa3UdDo+CA61ilZzhX20mbBwrEM5aM5O7rXs6YMJ3iGTF4bu6jhhMiCN9VBcjdEe2aTD++vwsOgSHBzzciVwLD7NsAOW0Fe2llM1j93JcE108YUp7nPVUIlt7XkUmZdR32xBr9kI0Z7SlaulvGM8la5mtjGAoM9/sWpR47fSjETB+hOBPbmWS4E++wMXBW+lbLh3JzeP8hgsi1TfyqRHwDkJaL/McyGO6gh1jBLUpUZDlQhfJBq/u9gB6Y1IXjSw7wQjvtjVaOHGVvPCRjpzVxaetVxHD2LbQnP5ikF9zdms+cNn3Ju9y6TsZPxm2ctzXlGzAASGQv6zfhe57AvBPqqnOpUQTP5ofLNy+UWChUl/VS/GssiUA11GuYjk2HD7YISkDP+m/2RFKqwYPkQWEWKexk7uw64H5lrlBj0bOqRzwwrjpRZ+JiLvntuQyJL4Hy72wBk1TUBgHc="
 cache:
   directories:
     - $HOME/.pip-cache/
