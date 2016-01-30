@@ -371,4 +371,6 @@ class AsyncAWSClient(AWSClient):
         :rtype: :py:class:`tornado.httpclient.AsyncHTTPClient`
 
         """
-        return httpclient.AsyncHTTPClient(max_clients=self._max_clients)
+        return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
+                                          force_instance=True)
+
