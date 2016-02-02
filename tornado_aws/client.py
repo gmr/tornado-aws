@@ -20,6 +20,7 @@ from tornado_aws import config
 
 LOGGER = logging.getLogger(__name__)
 
+
 _HEADER_FORMAT = '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
 
 
@@ -55,6 +56,10 @@ class AWSClient(object):
     instance. The configuration logic matches the access key with the exception
     of the environment variable. The secret key can set in the
     ``AWS_SECRET_ACCESS_KEY`` environment variable.
+
+    If there is no local configuration or credentials, the client will attempt
+    to load the information from the EC2 instance meta-data API, if it is
+    available.
 
     The ``endpoint`` argument is primarily used for testing and allows for
     the use of a specified base URL value instead of the auto-construction of
@@ -100,6 +105,7 @@ class AWSClient(object):
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
         :param bytes body: The request body
+        :param  bool raise_error: Raise exception on error
         :rtype: :py:class:`tornado.httpclient.HTTPResponse`
 
         """

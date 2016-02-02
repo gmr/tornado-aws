@@ -32,7 +32,8 @@ class ParseConfigFileTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as handle:
             handle.write(b'foo: bar\n')
             handle.flush()
-            self.assertRaises(exceptions.ConfigParserError, config._parse_file,
+            self.assertRaises(exceptions.ConfigParserError,
+                              config._parse_file,
                               handle.name)
 
 
