@@ -81,6 +81,8 @@ class GetRegionTestCase(unittest.TestCase):
             self.assertRaises(exceptions.NoProfileError,
                               config._get_region, 'foo')
 
+    @unittest.skipIf(os.environ.get('TRAVIS') == 'true',
+                     'Skipping this test on Travis CI.')
     def test_raises_for_missing_file(self):
         os.environ['AWS_CONFIG_FILE'] = uuid.uuid4().hex
         self.assertRaises(exceptions.ConfigNotFound, config._get_region,
@@ -155,6 +157,8 @@ class GetCredentialsTestCase(unittest.TestCase):
             self.assertRaises(exceptions.NoCredentialsError,
                               config._get_credentials, 'foo')
 
+    @unittest.skipIf(os.environ.get('TRAVIS') == 'true',
+                     'Skipping this test on Travis CI.')
     def test_raises_for_missing_file(self):
         os.environ['AWS_SHARED_CREDENTIALS_FILE'] = uuid.uuid4().hex
         self.assertRaises(exceptions.ConfigNotFound, config._get_credentials,
