@@ -18,6 +18,11 @@ class AWSClientException(Exception):
         super(AWSClientException, self).__init__(self.fmt.format(**kwargs))
 
 
+class AWSError(AWSClientException):
+    """Raised when the credentials could not be located."""
+    fmt = '{message}'
+
+
 class ConfigNotFound(AWSClientException):
     """The configuration file could not be parsed.
 
