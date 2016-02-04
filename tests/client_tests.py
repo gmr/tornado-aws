@@ -25,8 +25,6 @@ class ClientConfigTestCase(BaseTestCase):
         obj = self.get_client('dynamodb', region=region,
                               access_key=access_key, secret_key=secret_key)
         self.assertEqual(obj._region, region)
-        self.assertEqual(obj._access_key, access_key)
-        self.assertEqual(obj._secret_key, secret_key)
 
     def test_with_valid_config_specified_profile(self):
         cfg = {
@@ -49,13 +47,9 @@ class ClientConfigTestCase(BaseTestCase):
                 handle.write(utils.build_ini(creds))
                 handle.flush()
                 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
-
                 obj = self.get_client('dynamodb')
                 self.assertEqual(cfg['default']['region'], obj._region)
-                self.assertEqual(creds['default']['aws_access_key_id'],
-                                 obj._access_key)
-                self.assertEqual(creds['default']['aws_secret_access_key'],
-                                 obj._secret_key)
+
 
 
 class AsyncClientConfigTestCase(ClientConfigTestCase):

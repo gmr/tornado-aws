@@ -8,18 +8,26 @@ client API implementations.
 import datetime
 import hashlib
 import hmac
+import json
 import logging
+import os
 try:
     from urllib import parse as _urlparse
 except ImportError:
     import urlparse as _urlparse
 
-from tornado import httpclient
+from tornado import concurrent, httpclient, ioloop
 
-from tornado_aws import config
+from tornado_aws import config, exceptions
 
 LOGGER = logging.getLogger(__name__)
 
+MIME_AWZ_JSON = 'application/x-amz-json-1.0'
+
+_REFRESH_EXCEPTIONS = [
+    'com.amazon.coral.service#InvalidSignatureException',
+    'com.amazon.coral.service#UnrecognizedClientException'
+]
 
 _HEADER_FORMAT = '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
 
@@ -78,6 +86,7 @@ class AWSClient(object):
 
     """
     ALGORITHM = 'AWS4-HMAC-SHA256'
+    ASYNC = False
     CONNECT_TIMEOUT = 10
     REQUEST_TIMEOUT = 30
     SCHEME = 'https'
@@ -85,14 +94,17 @@ class AWSClient(object):
     def __init__(self, service, profile=None, region=None,
                  access_key=None, secret_key=None, endpoint=None):
         self._service = service
-        self._profile = profile
-        self._region, self._access_key, self._secret_key = \
-            self._get_config(region, access_key, secret_key)
+        self._profile = profile or os.getenv('AWS_DEFAULT_PROFILE', 'default')
+        self._region = region or config.get_region(profile)
+        self._client = self._get_client_adapter()
+        self._auth_config = config.Authorization(self._profile, access_key,
+                                                 secret_key, self._client)
         self._endpoint_url = self._endpoint(endpoint)
         self._host = self._hostname(self._endpoint_url)
+        self._retrying_request = False
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
-              raise_error=False):
+              _recursed=False):
         """Executes a request, returning an
         :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
 
@@ -105,21 +117,37 @@ class AWSClient(object):
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
         :param bytes body: The request body
-        :param  bool raise_error: Raise exception on error
-        :rtype: :py:class:`tornado.httpclient.HTTPResponse`
+        :rtype: :class:`~tornado.httpclient.HTTPResponse`
+        :raises: :class:`~tornado.httpclient.HTTPError`
+        :raises: :class:`~tornado_aws.exceptions.NoCredentialsError`
+        :raises: :class:`~tornado_aws.exceptions.AWSError`
 
         """
-        signed_headers, signed_url = \
-            self._signed_request(method, path, query_args or {}, dict(headers),
-                                 body)
-        request = httpclient.HTTPRequest(signed_url, method,
-                                         signed_headers, body,
-                                         connect_timeout=self.CONNECT_TIMEOUT,
-                                         request_timeout=self.REQUEST_TIMEOUT)
-        adapter = self._get_client_adapter()
-        response = adapter.fetch(request, raise_error=raise_error)
-        adapter.close()
-        return response
+        if self._auth_config.needs_credentials():
+            self._auth_config.refresh()
+
+        request = self._create_request(method, path, query_args, headers, body)
+
+        try:
+            result = self._client.fetch(request, raise_error=True)
+            self._retrying_request = False
+            return result
+        except httpclient.HTTPError as error:
+            awz_error = self._awz_error(error)
+            if awz_error:
+                if self._credentials_error(awz_error):
+                    if not self._auth_config.local_credentials:
+                        if not self._retrying_request:
+                            self._auth_config.refresh()
+                            self._retrying_request = True
+                            return self.fetch(method, path, query_args,
+                                              headers, body)
+                        else:
+                            self._auth_config.reset()
+
+                raise exceptions.AWSError(type=awz_error['__type'],
+                                          message=awz_error['message'])
+            raise
 
     def _auth_header(self, amz_date, date_stamp, request_hash, signed_headers):
         """Return the Authorization string header value
@@ -132,8 +160,45 @@ class AWSClient(object):
 
         """
         scope, signature = self._signature(amz_date, date_stamp, request_hash)
-        return _HEADER_FORMAT.format(self.ALGORITHM, self._access_key, scope,
+        return _HEADER_FORMAT.format(self.ALGORITHM,
+                                     self._auth_config.access_key,
+                                     scope,
                                      signed_headers, signature)
+
+    @staticmethod
+    def _awz_error(error):
+        """Returns the AWZ error parsed out of the HTTPError that was raised.
+
+        :param tornado.httpclient.HTTPError error: The error that was raised
+        :rtype: dict|None
+
+        """
+        if error.code == 400:
+            payload = json.loads(error.response.body.decode('utf-8'))
+            if isinstance(payload, dict) and '__type' in payload:
+                return payload
+
+    def _create_request(self, method, path='/', query_args=None, headers=None,
+                        body=b''):
+        """Create the HTTPRequest instance that will be used to make the AWS
+        API request.
+
+        :param str method: HTTP request method
+        :param str path: The request path
+        :param dict query_args: Request query arguments
+        :param dict headers: Request headers
+        :param bytes body: The request body
+        :rtype: tornado.httpclient.HTTPClient
+
+        """
+        (signed_headers,
+         signed_url) = self._signed_request(method, path, query_args or {},
+                                            dict(headers), body or b'')
+
+        return httpclient.HTTPRequest(signed_url, method,
+                                      signed_headers, body,
+                                      connect_timeout=self.CONNECT_TIMEOUT,
+                                      request_timeout=self.REQUEST_TIMEOUT)
 
     def _endpoint(self, endpoint):
         """Return the user specified endpoint or dynamically create the
@@ -148,26 +213,8 @@ class AWSClient(object):
                                                  self._service,
                                                  self._region)
 
-    def _get_config(self, region, access_key, secret_key):
-        """Get the negotiated configuration, preferring values that were passed
-        in to the client and using any values returned from the file based
-        configuration where values are missing.
-
-        :param str region: The AWS region
-        :param str access_key: Access key that was passed in to the constructor
-        :param str secret_key: Secret key that was passed in to the constructor
-        :rtype: str, str, str
-        :return: region, access_key, secret_key
-
-        """
-        if not region or not access_key or not secret_key:
-            _region, _access_key, _secret_key = config.get(self._profile)
-            return (region or _region,
-                    access_key or _access_key,
-                    secret_key or _secret_key)
-        return region, access_key, secret_key
-
-    def _get_client_adapter(self):
+    @staticmethod
+    def _get_client_adapter():
         """Return a HTTP client
 
         :rtype: :py:class:`tornado.httpclient.HTTPClient`
@@ -196,6 +243,19 @@ class AWSClient(object):
 
         """
         return _urlparse.quote(value, safe='').replace('%7E', '~')
+
+    def _credentials_error(self, error):
+        """Returns ``True`` if the the error is related to authentication
+        errors that could be remedied by loading from ECS metadata and user
+        data API.
+
+        :param dict error: The AWZ error response
+        :rtype: bool
+
+        """
+        if self._auth_config.local_credentials:
+            return False
+        return error['__type'] in _REFRESH_EXCEPTIONS
 
     @staticmethod
     def _sign(key, msg):
@@ -238,6 +298,10 @@ class AWSClient(object):
             'X-Amz-Content-sha256': payload_hash
         })
 
+        # Temporary auth security token
+        if self._auth_config.security_token:
+            headers['X-Amz-Security-Token'] = self._auth_config.security_token
+
         signed_headers, headers_string = self._signed_headers(headers)
 
         request = '\n'.join([method, path, query_string, headers_string,
@@ -247,6 +311,7 @@ class AWSClient(object):
         headers['Authorization'] = self._auth_header(amz_date, date_stamp,
                                                      request_hash,
                                                      signed_headers)
+
         return headers, '{0}{1}?{2}'.format(self._endpoint_url, path,
                                             query_string)
 
@@ -295,7 +360,7 @@ class AWSClient(object):
         tmp = dict([(key.lower(), value) for key, value in headers.items()])
         signed_headers = ';'.join([k.lower() for k in sorted(tmp.keys())])
         headers_string = '\n'.join(['{0}:{1}'.format(k, tmp[k])
-                                   for k in sorted(tmp.keys())]) + '\n'
+                                    for k in sorted(tmp.keys())]) + '\n'
         return signed_headers, headers_string
 
     def _signing_key(self, date_stamp):
@@ -305,7 +370,7 @@ class AWSClient(object):
         :rtype: bytes
 
         """
-        key = 'AWS4{0}'.format(self._secret_key)
+        key = 'AWS4{0}'.format(self._auth_config.secret_key)
         date = self._sign(key.encode('utf-8'), date_stamp.encode('utf-8'))
         region = self._sign(date, self._region.encode('utf-8'))
         service = self._sign(region, self._service.encode('utf-8'))
@@ -365,11 +430,14 @@ class AsyncAWSClient(AWSClient):
     :raises: :py:class:`tornado_aws.exceptions.NoProfileError`
 
     """
+    ASYNC = True
+
     def __init__(self, service, profile=None, region=None, access_key=None,
                  secret_key=None, endpoint=None, max_clients=100):
+        self._ioloop = ioloop.IOLoop.current()
+        self._max_clients = max_clients
         super(AsyncAWSClient, self).__init__(service, profile, region,
                                              access_key, secret_key, endpoint)
-        self._max_clients = max_clients
 
     def _get_client_adapter(self):
         """Return an asynchronous HTTP client adapter
@@ -380,3 +448,75 @@ class AsyncAWSClient(AWSClient):
         return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
                                           force_instance=True)
 
+    def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
+              _recursed=False):
+        """Executes a request, returning an
+        :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
+
+        If an error occurs during the fetch, we raise an
+        :py:class:`HTTPError <tornado.httpclient.HTTPError>` unless the
+        ``raise_error`` keyword argument is set to ``False``.
+
+        :param str method: HTTP request method
+        :param str path: The request path
+        :param dict query_args: Request query arguments
+        :param dict headers: Request headers
+        :param bytes body: The request body
+        :rtype: :class:`~tornado.httpclient.HTTPResponse`
+        :raises: :class:`~tornado.httpclient.HTTPError`
+        :raises: :class:`~tornado_aws.exceptions.AWSError`
+        :raises: :class:`~tornado_aws.exceptions.NoCredentialsError`
+
+        """
+        future = concurrent.TracebackFuture()
+
+        def on_response(response):
+            exception = response.exception()
+            if exception:
+                awz_error = self._awz_error(exception)
+                if awz_error:
+                    if self._credentials_error(awz_error):
+                        self._auth_config.reset()
+                        if not self._auth_config.local_credentials:
+                            if not _recursed:
+
+                                def on_retry(retry):
+                                    if not self._future_exception(retry,
+                                                                  future):
+                                        future.set_result(retry.result())
+
+                                request = self.fetch(method, path, query_args,
+                                                     headers, body, True)
+                                self._ioloop.add_future(request, on_retry)
+                                return
+                    exception = exceptions.AWSError(
+                        type=awz_error['__type'],
+                        message=awz_error['message'])
+                future.set_exception(exception)
+            else:
+                future.set_result(response.result())
+
+        def perform_request():
+            request = self._create_request(method, path, query_args, headers,
+                                           body)
+            api_future = self._client.fetch(request, raise_error=True)
+            self._ioloop.add_future(api_future, on_response)
+
+        def on_refreshed(response):
+            if not self._future_exception(response, future):
+                perform_request()
+
+        if self._auth_config.needs_credentials():
+            request_future = self._auth_config.refresh()
+            self._ioloop.add_future(request_future, on_refreshed)
+        else:
+            perform_request()
+
+        return future
+
+    @staticmethod
+    def _future_exception(inner, outer):
+        exception = inner.exception()
+        if exception:
+            outer.set_exception(exception)
+        return bool(exception)
