@@ -209,6 +209,19 @@ class Authorization(object):
             raise exceptions.NoCredentialsError()
         return future
 
+    def reset(self):
+        """Reset the security credentials.
+
+        :raises: tornado_aws.exceptions.LocalCredentialsError()
+
+        """
+        if self.local_credentials:
+            raise exceptions.LocalCredentialsError()
+        self._access_key = None
+        self._secret_key = None
+        self._expiration = None
+        self._security_token = None
+
     def _assign_credentials(self, data):
         """Assign the values returned by the EC2 Metadata and user data API to
         the internal credentials attributes.
