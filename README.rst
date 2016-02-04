@@ -26,7 +26,9 @@ Example
 
     HEADERS = {'Content-Type': 'application/x-amz-json-1.0',
                'x-amz-target': 'DynamoDB_20120810.DescribeTable'}
-    PAYLOAD = {'TableName': 'prod-us-east-1-history-events'}
+    PAYLOAD = {'TableName': 'my-dynamodb-table'}
+
+    _ioloop = ioloop.IOLoop.instance()
 
     @gen.coroutine
     def async_request():
@@ -35,9 +37,8 @@ Example
                                       body=json.dumps(PAYLOAD))
         x = json.loads(response.body.decode('utf-8'))
         pprint.pprint(x)
-        ioloop.IOLoop.instance().stop()
+        _ioloop.stop()
 
-    _ioloop = ioloop.IOLoop.instance()
     _ioloop.add_callback(async_request)
     _ioloop.start()
 
