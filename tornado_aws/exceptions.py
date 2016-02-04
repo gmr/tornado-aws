@@ -42,6 +42,11 @@ class ConfigParserError(AWSClientException):
     fmt = 'Unable to parse config file ({path})'
 
 
+class LocalCredentialsError(AWSClientException):
+    """Raised when the credentials could not be located."""
+    fmt = 'Cant reset local credentials'
+
+
 class NoCredentialsError(AWSClientException):
     """Raised when the credentials could not be located."""
     fmt = 'Credentials not found'
