@@ -51,6 +51,11 @@ class AWSClient(object):
     ``AWSClient`` instance or by setting the ``AWS_DEFAULT_PROFILE``
     environment variable. If neither are set, ``default`` will be used.
 
+    The AWS region is set by reading in configuration or by the
+    ``AWS_DEFAULT_REGION`` environment variable. If neither or set, it will
+    attempt to be set by invoking the EC2 Instance Metadata and user data API,
+    if available.
+
     The AWS access key can be set when creating a new instance. If it's not
     passed in when creating the ``AWSClient``, the client will attempt to
     get the key from the ``AWS_ACCESS_KEY_ID`` environment variable. If that is
@@ -101,7 +106,6 @@ class AWSClient(object):
                                                  secret_key, self._client)
         self._endpoint_url = self._endpoint(endpoint)
         self._host = self._hostname(self._endpoint_url)
-        self._retrying_request = False
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
               _recursed=False):
@@ -130,18 +134,16 @@ class AWSClient(object):
 
         try:
             result = self._client.fetch(request, raise_error=True)
-            self._retrying_request = False
             return result
         except httpclient.HTTPError as error:
             awz_error = self._awz_error(error)
             if awz_error:
                 if self._credentials_error(awz_error):
                     if not self._auth_config.local_credentials:
-                        if not self._retrying_request:
+                        if not _recursed:
                             self._auth_config.refresh()
-                            self._retrying_request = True
                             return self.fetch(method, path, query_args,
-                                              headers, body)
+                                              headers, body, True)
                         else:
                             self._auth_config.reset()
 
@@ -220,7 +222,7 @@ class AWSClient(object):
         :rtype: :py:class:`tornado.httpclient.HTTPClient`
 
         """
-        return httpclient.HTTPClient()
+        return httpclient.HTTPClient(force_instance=True)
 
     @staticmethod
     def _hostname(url):

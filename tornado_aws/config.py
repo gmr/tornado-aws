@@ -37,6 +37,10 @@ def get_region(profile):
     :raises: exceptions.ConfigNotFound
 
     """
+    region = os.getenv('AWS_DEFAULT_REGION', None)
+    if region:
+        return region
+
     file_path = os.getenv('AWS_CONFIG_FILE', '~/.aws/config')
     try:
         config = _parse_file(file_path)
@@ -91,7 +95,7 @@ def _request_region_from_instance():
 
     """
     url = INSTANCE_ENDPOINT.format(REGION_PATH)
-    client = httpclient.HTTPClient()
+    client = httpclient.HTTPClient(force_instance=True)
     response = client.fetch(url,
                             connect_timeout=HTTP_TIMEOUT,
                             request_timeout=HTTP_TIMEOUT)

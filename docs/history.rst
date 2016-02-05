@@ -3,6 +3,12 @@
 Version History
 ===============
 
+0.4.0 (2016-02-05)
+------------------
+ - Add support for the AWS_DEFAULT_REGION environment variable.
+ - Cleanup retry requests
+ - Ensure HTTPClient usage is new and not out of a shared pool
+
 0.3.0 (2016-02-03)
 ------------------
  - Make authentication work with EC2 Instance metadata, add async support for credential fetching.
