@@ -21,7 +21,7 @@ DESC = 'A low-level Amazon Web Services API client for Tornado'
 TESTS_REQUIRE = ['nose', 'mock', 'coverage']
 
 setuptools.setup(name='tornado-aws',
-                 version='0.4.0',
+                 version='0.4.1',
                  description=DESC,
                  long_description=open('README.rst').read(),
                  author='Gavin M. Roy',

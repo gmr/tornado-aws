@@ -15,7 +15,8 @@ class AWSClientException(Exception):
     fmt = 'An error occurred'
 
     def __init__(self, **kwargs):
-        super(AWSClientException, self).__init__(self.fmt.format(**kwargs))
+        super(AWSClientException, self).__init__(self.fmt.format(**kwargs),
+                                                 kwargs)
 
 
 class AWSError(AWSClientException):
