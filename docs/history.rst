@@ -3,6 +3,14 @@
 Version History
 ===============
 
+0.4.2 (2016-02-16)
+------------------
+ - Add support for ``ExpiredTokenException``
+
+0.4.1 (2016-02-16)
+------------------
+ - Pass in kwargs into ``AWSClientException``
+
 0.4.0 (2016-02-05)
 ------------------
  - Add support for the AWS_DEFAULT_REGION environment variable.

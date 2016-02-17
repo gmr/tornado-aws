@@ -26,7 +26,8 @@ MIME_AWZ_JSON = 'application/x-amz-json-1.0'
 
 _REFRESH_EXCEPTIONS = [
     'com.amazon.coral.service#InvalidSignatureException',
-    'com.amazon.coral.service#UnrecognizedClientException'
+    'com.amazon.coral.service#UnrecognizedClientException',
+    'com.amazon.coral.service#ExpiredTokenException'
 ]
 
 _HEADER_FORMAT = '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
