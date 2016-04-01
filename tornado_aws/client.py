@@ -176,6 +176,8 @@ class AWSClient(object):
         :rtype: dict|None
 
         """
+        if not isinstance(error, httpclient.HTTPError):
+            return
         if error.code == 400:
             payload = json.loads(error.response.body.decode('utf-8'))
             if isinstance(payload, dict) and '__type' in payload:
