@@ -196,6 +196,8 @@ class AWSClient(object):
         :rtype: tornado.httpclient.HTTPClient
 
         """
+        if headers is None:
+            headers = {}
         (signed_headers,
          signed_url) = self._signed_request(method, path, query_args or {},
                                             dict(headers), body or b'')
@@ -297,7 +299,7 @@ class AWSClient(object):
         payload_hash = hashlib.sha256(body).hexdigest()
 
         headers.update({
-            'Content-Length': len(body),
+            'Content-Length': str(len(body)),
             'Date': amz_date,
             'Host': self._host,
             'X-Amz-Content-sha256': payload_hash
