@@ -3,6 +3,11 @@
 Version History
 ===============
 
+
+0.4.4 (2016-04-01)
+------------------
+ - Don't blow up if awz_error does not have a message
+
 0.4.3 (2016-04-01)
 ------------------
  - Allow GET with empty body (#2) - Dmitry Mukhin
