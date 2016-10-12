@@ -496,12 +496,12 @@ class AsyncAWSClient(AWSClient):
                                                      headers, body, True)
                                 self._ioloop.add_future(request, on_retry)
                                 return
-                    if 'message' not in awz_error:
+                    msg = aws_error.get('message', aws_error.get('Message'))
+                    if not msg:
                         LOGGER.debug('awz_error without message: %r',
                                      awz_error)
                     exception = exceptions.AWSError(
-                        type=awz_error['__type'],
-                        message=awz_error.get('message'))
+                        type=awz_error['__type'], message=msg)
                 future.set_exception(exception)
             else:
                 future.set_result(response.result())
