@@ -57,7 +57,7 @@ class GetRegionTestCase(unittest.TestCase):
             'default': {
                 'region': uuid.uuid4().hex
             },
-            'foo': {
+            'profile foo': {
                 'region': uuid.uuid4().hex
             }
         }
@@ -66,7 +66,7 @@ class GetRegionTestCase(unittest.TestCase):
             handle.flush()
             os.environ['AWS_CONFIG_FILE'] = handle.name
             value = config.get_region('foo')
-            self.assertEqual(expectation['foo']['region'], value)
+            self.assertEqual(expectation['profile foo']['region'], value)
 
     @unittest.skipIf(os.environ.get('TRAVIS') == 'true',
                      'Skipping this test on Travis CI.')

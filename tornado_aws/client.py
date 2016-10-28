@@ -101,7 +101,7 @@ class AWSClient(object):
                  access_key=None, secret_key=None, endpoint=None):
         self._service = service
         self._profile = profile or os.getenv('AWS_DEFAULT_PROFILE', 'default')
-        self._region = region or config.get_region(profile)
+        self._region = region or config.get_region(self._profile)
         self._client = self._get_client_adapter()
         self._auth_config = config.Authorization(self._profile, access_key,
                                                  secret_key, self._client)
