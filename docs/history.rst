@@ -3,8 +3,8 @@
 Version History
 ===============
 
-Next Release
-------------
+0.5.0 (2016-10-28)
+------------------
  - Correctly support region lookup for non-default profiles.
 
 0.4.4 (2016-04-01)
