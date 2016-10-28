@@ -53,9 +53,10 @@ def get_region(profile):
                          error)
             raise exceptions.ConfigNotFound(path=file_path)
 
-    if profile not in config and 'default' not in config:
+    key = 'profile {0}'.format(profile)
+    if key not in config and 'default' not in config:
         raise exceptions.NoProfileError(path=file_path, profile=profile)
-    return (config.get(profile, {}).get('region') or
+    return (config.get(key, {}).get('region') or
             config.get('default', {}).get('region') or
             DEFAULT_REGION)
 
