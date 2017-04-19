@@ -24,6 +24,8 @@ class ClientConfigTestCase(BaseTestCase):
         os.environ.pop('AWS_SHARED_CREDENTIALS_FILE', None)
         os.environ.pop('AWS_DEFAULT_PROFILE', None)
 
+
+
     def test_passed_in_values(self):
         region = uuid.uuid4().hex
         access_key = uuid.uuid4().hex

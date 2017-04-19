@@ -13,6 +13,8 @@ except ImportError:
 
 import tornado_aws
 
+from . import utils
+
 
 class DynamoDBTestCase(testing.AsyncTestCase):
 
@@ -68,9 +70,10 @@ class DynamoDBTestCase(testing.AsyncTestCase):
 
     def setUp(self):
         super(DynamoDBTestCase, self).setUp()
-        os.environ.pop('AWS_CONFIG_FILE', None)
-        os.environ.pop('AWS_SHARED_CREDENTIALS_FILE', None)
-        os.environ.pop('AWS_DEFAULT_PROFILE', None)
+        utils.clear_environment()
+        os.environ['AWS_ACCESS_KEY_ID'] = str(uuid.uuid4())
+        os.environ['AWS_SECRET_ACCESS_KEY'] = str(uuid.uuid4())
+        os.environ['AWS_DEFAULT_REGION'] = 'local'
         self.client = tornado_aws.AsyncAWSClient(
             'dynamodb', endpoint='http://localhost:8000')
 
@@ -94,9 +97,10 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
 
     def setUp(self):
         super(UseCurlDynamoDBTestCase, self).setUp()
-        os.environ.pop('AWS_CONFIG_FILE', None)
-        os.environ.pop('AWS_SHARED_CREDENTIALS_FILE', None)
-        os.environ.pop('AWS_DEFAULT_PROFILE', None)
+        utils.clear_environment()
+        os.environ['AWS_ACCESS_KEY_ID'] = str(uuid.uuid4())
+        os.environ['AWS_SECRET_ACCESS_KEY'] = str(uuid.uuid4())
+        os.environ['AWS_DEFAULT_REGION'] = 'local'
         self.client = tornado_aws.AsyncAWSClient(
             'dynamodb', endpoint='http://localhost:8000', use_curl=True)
 
