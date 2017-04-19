@@ -1,0 +1,5 @@
+localstack:
+  image: atlassianlabs/localstack
+  ports:
+    - 4567-4578:4567-4578
+    - 8080:8080
