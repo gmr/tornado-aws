@@ -1,3 +1,5 @@
 coverage
 codecov
+flake8
 nose
+pylint
