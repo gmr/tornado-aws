@@ -94,6 +94,9 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
 
     def setUp(self):
         super(UseCurlDynamoDBTestCase, self).setUp()
+        os.environ.pop('AWS_CONFIG_FILE', None)
+        os.environ.pop('AWS_SHARED_CREDENTIALS_FILE', None)
+        os.environ.pop('AWS_DEFAULT_PROFILE', None)
         self.client = tornado_aws.AsyncAWSClient(
             'dynamodb', endpoint='http://localhost:8000', use_curl=True)
 
