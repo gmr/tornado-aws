@@ -20,7 +20,7 @@ DESC = 'A low-level Amazon Web Services API client for Tornado'
 
 
 setuptools.setup(name='tornado-aws',
-                 version='0.5.0',
+                 version='0.6.0',
                  description=DESC,
                  long_description=open('README.rst').read(),
                  author='Gavin M. Roy',
@@ -31,6 +31,7 @@ setuptools.setup(name='tornado-aws',
                                     'requires/installation.txt']},
                  include_package_data=True,
                  install_requires=open('requires/installation.txt').read(),
+                 extras_require={'curl': ['pycurl']},
                  tests_require=open('requires/testing.txt').read(),
                  license='BSD',
                  classifiers=CLASSIFIERS,
