@@ -3,6 +3,10 @@
 Version History
 ===============
 
+0.6.0 (2017-04-18)
+------------------
+ - Add support for using ``curl_httpclient.CurlAsyncHTTPClient``
+
 0.5.0 (2016-10-28)
 ------------------
  - Correctly support region lookup for non-default profiles.
