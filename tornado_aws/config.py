@@ -11,7 +11,7 @@ import logging
 from os import path
 import os
 
-from tornado import concurrent, httpclient, ioloop
+from tornado import concurrent, curl_httpclient, httpclient, ioloop
 
 from tornado_aws import exceptions
 
@@ -47,8 +47,7 @@ def get_region(profile):
     except exceptions.ConfigNotFound:
         try:
             return _request_region_from_instance()
-        except (httpclient.HTTPError,
-                OSError) as error:
+        except (httpclient.HTTPError, OSError) as error:
             LOGGER.error('Error fetching from EC2 Instance Metadata (%s)',
                          error)
             raise exceptions.ConfigNotFound(path=file_path)
@@ -59,6 +58,20 @@ def get_region(profile):
     return (config.get(key, {}).get('region') or
             config.get('default', {}).get('region') or
             DEFAULT_REGION)
+
+
+def _is_async_client(client):
+    """Returns ``True`` if the client that is passed in is asynchronous.
+
+    :param client: The HTTP client to use for EC2 API
+    :type client: tornado.httpclient.HTTPClient or
+        tornado.httpclient.AsyncHTTPClient or
+        tornado.curl_httpclient.CurlAsyncHTTPClient
+    :rtype: bool
+
+    """
+    return isinstance(client, (httpclient.AsyncHTTPClient,
+                               curl_httpclient.CurlAsyncHTTPClient))
 
 
 def _parse_file(file_path):
@@ -96,12 +109,9 @@ def _request_region_from_instance():
 
     """
     url = INSTANCE_ENDPOINT.format(REGION_PATH)
-    client = httpclient.HTTPClient(force_instance=True)
-    response = client.fetch(url,
-                            connect_timeout=HTTP_TIMEOUT,
-                            request_timeout=HTTP_TIMEOUT)
+    response = httpclient.HTTPClient().fetch(
+        url, connect_timeout=HTTP_TIMEOUT, request_timeout=HTTP_TIMEOUT)
     data = json.loads(response.body.decode('utf-8'))
-    client.close()
     return data['region']
 
 
@@ -121,15 +131,13 @@ class Authorization(object):
         """
         self._client = client
         self._profile = profile
-
-        (self._access_key,
-         self._secret_key) = self._resolve_credentials(access_key, secret_key)
+        self._access_key, self._secret_key = self._resolve_credentials(
+            access_key, secret_key)
         self._security_token = None
         self._expiration = None
         self._local_credentials = bool(self._access_key)
-
-        async = isinstance(client, httpclient.AsyncHTTPClient)
-        self._ioloop = ioloop.IOLoop.current() if async else None
+        self._is_async = _is_async_client(client)
+        self._ioloop = ioloop.IOLoop.current() if self._is_async else None
 
     @property
     def access_key(self):
@@ -186,10 +194,9 @@ class Authorization(object):
 
         """
         LOGGER.debug('Refreshing EC2 IAM Credentials')
-        async = isinstance(self._client, httpclient.AsyncHTTPClient)
-        future = concurrent.TracebackFuture() if async else None
+        future = concurrent.TracebackFuture() if self._is_async else None
         try:
-            result = self._fetch_credentials(async)
+            result = self._fetch_credentials()
             if concurrent.is_future(result):
 
                 def on_complete(response):
@@ -239,15 +246,14 @@ class Authorization(object):
         self._expiration = data['Expiration']
         self._security_token = data['Token']
 
-    def _fetch_credentials(self, async):
+    def _fetch_credentials(self):
         """Fetch credential information from the local EC2 Metadata and user
         data API.
 
-        :param bool async: Perform async fetch
         :rtype: dict
 
         """
-        if async:
+        if self._is_async:
             return self._fetch_credentials_async()
         role = self._get_role()
         credentials = self._get_instance_credentials(role)
@@ -287,7 +293,6 @@ class Authorization(object):
         """Attempt to get temporary credentials for the specified role from the
         EC2 Instance Metadata and user data API
 
-        :param tornado.httpclient.HTTPClient client: The http client to use
         :param str role: The role to get temporary credentials for
 
         :rtype: dict
