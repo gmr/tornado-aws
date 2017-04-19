@@ -7,9 +7,9 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Programming Language :: Python :: 2',
                'Programming Language :: Python :: 2.7',
                'Programming Language :: Python :: 3',
-               'Programming Language :: Python :: 3.3',
                'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
+               'Programming Language :: Python :: 3.6',
                'Programming Language :: Python :: Implementation :: CPython',
                'Programming Language :: Python :: Implementation :: PyPy',
                'Topic :: Communications',
@@ -17,7 +17,6 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Topic :: Software Development :: Libraries']
 
 DESC = 'A low-level Amazon Web Services API client for Tornado'
-
 
 setuptools.setup(name='tornado-aws',
                  version='0.6.0',
