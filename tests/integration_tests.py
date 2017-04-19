@@ -4,7 +4,7 @@ import os
 import unittest
 import uuid
 
-from tornado import testing
+from tornado import httpclient, testing
 
 try:
     from tornado import curl_httpclient
@@ -107,3 +107,17 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
     @unittest.skipIf(curl_httpclient is None, 'pycurl not installed')
     def test_create_table(self):
         return super(UseCurlDynamoDBTestCase, self).test_create_table()
+
+    @testing.gen_test
+    @unittest.skipIf(curl_httpclient is None, 'pycurl not installed')
+    def test_invalid_endpoint(self):
+        client = tornado_aws.AsyncAWSClient(
+            'dynamodb', endpoint='http://localhost', use_curl=True)
+        definition = copy.deepcopy(self.TABLE_DEFINITION)
+        definition['TableName'] = str(uuid.uuid4())
+        with self.assertRaises(httpclient.HTTPError):
+            yield client.fetch(
+                'POST', '/', body=json.dumps(definition).encode('utf-8'),
+                headers={
+                    'x-amz-target': 'DynamoDB_20120810.CreateTable',
+                    'Content-Type': 'application/x-amz-json-1.0'})
