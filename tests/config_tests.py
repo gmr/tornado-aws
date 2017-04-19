@@ -72,5 +72,5 @@ class GetRegionTestCase(unittest.TestCase):
                      'Skipping this test on Travis CI.')
     def test_raises_for_missing_file(self):
         os.environ['AWS_CONFIG_FILE'] = uuid.uuid4().hex
-        self.assertRaises(exceptions.ConfigNotFound, config.get_region,
-                          'default')
+        with self.assertRaises(exceptions.ConfigNotFound):
+            config.get_region('default')
