@@ -16,7 +16,12 @@ try:
 except ImportError:
     import urlparse as _urlparse
 
-from tornado import concurrent, curl_httpclient, httpclient, ioloop
+from tornado import concurrent, httpclient, ioloop
+
+try:
+    from tornado import curl_httpclient
+except ImportError:
+    curl_httpclient = None
 
 from tornado_aws import config, exceptions
 
@@ -85,10 +90,10 @@ class AWSClient(object):
     :param str access_key: The access key
     :param str secret_key: The secret access key
     :param str endpoint: Override the base endpoint URL
-    :raises: :py:class:`tornado_aws.exceptions.ConfigNotFound`
-    :raises: :py:class:`tornado_aws.exceptions.ConfigParserError`
-    :raises: :py:class:`tornado_aws.exceptions.NoCredentialsError`
-    :raises: :py:class:`tornado_aws.exceptions.NoProfileError`
+    :raises: :exc:`tornado_aws.exceptions.ConfigNotFound`
+    :raises: :exc:`tornado_aws.exceptions.ConfigParserError`
+    :raises: :exc:`tornado_aws.exceptions.NoCredentialsError`
+    :raises: :exc:`tornado_aws.exceptions.NoProfileError`
 
     """
     ALGORITHM = 'AWS4-HMAC-SHA256'
@@ -430,10 +435,11 @@ class AsyncAWSClient(AWSClient):
     :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
     :param bool use_curl: Use Tornado's CurlAsyncHTTPClient
     :param tornado.ioloop.IOLoop io_loop: Specify the IOLoop to use
-    :raises: :py:class:`tornado_aws.exceptions.ConfigNotFound`
-    :raises: :py:class:`tornado_aws.exceptions.ConfigParserError`
-    :raises: :py:class:`tornado_aws.exceptions.NoCredentialsError`
-    :raises: :py:class:`tornado_aws.exceptions.NoProfileError`
+    :raises: :exc:`tornado_aws.exceptions.ConfigNotFound`
+    :raises: :exc:`tornado_aws.exceptions.ConfigParserError`
+    :raises: :exc:`tornado_aws.exceptions.NoCredentialsError`
+    :raises: :exc:`tornado_aws.exceptions.NoProfileError`
+    :raises: :exc:`tornado_aws.exceptions.CurlNotInstalledError`
 
     """
     ASYNC = True
@@ -444,6 +450,9 @@ class AsyncAWSClient(AWSClient):
         self._ioloop = io_loop or ioloop.IOLoop.current()
         self._max_clients = max_clients
         self._use_curl = use_curl
+        if use_curl and not curl_httpclient:
+            raise exceptions.CurlNotInstalledError
+
         super(AsyncAWSClient, self).__init__(
             service, profile, region, access_key, secret_key, endpoint)
 

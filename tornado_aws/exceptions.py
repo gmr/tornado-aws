@@ -19,6 +19,14 @@ class AWSClientException(Exception):
                                                  kwargs)
 
 
+class CurlNotInstalledError(Exception):
+    """Raised when the CurlAsyncHTTPClient is requested but pycurl is not
+    installed.
+
+    """
+    fmt = 'use_curl was specified but pycurl is not installed'
+
+
 class AWSError(AWSClientException):
     """Raised when the credentials could not be located."""
     fmt = '{message}'
