@@ -93,7 +93,7 @@ class DynamoDBTestCase(testing.AsyncTestCase):
 class UseCurlDynamoDBTestCase(DynamoDBTestCase):
 
     def setUp(self):
-        super(DynamoDBTestCase, self).setUp()
+        super(UseCurlDynamoDBTestCase, self).setUp()
         self.client = tornado_aws.AsyncAWSClient(
             'dynamodb', endpoint='http://localhost:8000', use_curl=True)
 
