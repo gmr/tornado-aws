@@ -11,8 +11,7 @@ python:
 before_install:
   - docker run -d --name=dynalite -p 8000:8000 rajatvig/dynalite-alpine:latest
 install:
-  - pip install -r requirements.txt
-  - pip install -r test-requirements.txt
+  - pip install -r requires/testing.txt
 script: nosetests
 after_success:
   - codecov

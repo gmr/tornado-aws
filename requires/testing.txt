@@ -3,3 +3,5 @@ codecov
 flake8
 nose
 pylint
+wheel
+-r installation.txt
