@@ -2,6 +2,7 @@ coverage
 codecov
 flake8
 nose
+pycurl
 pylint
 wheel
 -r installation.txt
