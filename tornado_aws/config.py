@@ -11,7 +11,13 @@ import logging
 from os import path
 import os
 
-from tornado import concurrent, curl_httpclient, httpclient, ioloop
+from tornado import concurrent, httpclient, ioloop
+
+try:
+    from tornado import curl_httpclient
+except ImportError:  # pragma: no cover
+    curl_httpclient = httpclient
+    curl_httpclient.CurlAsyncHTTPClient = httpclient.AsyncHTTPClient
 
 from tornado_aws import exceptions
 
