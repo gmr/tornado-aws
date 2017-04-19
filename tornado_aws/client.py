@@ -16,7 +16,7 @@ try:
 except ImportError:
     import urlparse as _urlparse
 
-from tornado import concurrent, httpclient, ioloop
+from tornado import concurrent, curl_httpclient, httpclient, ioloop
 
 from tornado_aws import config, exceptions
 
@@ -99,10 +99,10 @@ class AWSClient(object):
 
     def __init__(self, service, profile=None, region=None,
                  access_key=None, secret_key=None, endpoint=None):
+        self._client = self._get_client_adapter()
         self._service = service
         self._profile = profile or os.getenv('AWS_DEFAULT_PROFILE', 'default')
         self._region = region or config.get_region(self._profile)
-        self._client = self._get_client_adapter()
         self._auth_config = config.Authorization(self._profile, access_key,
                                                  secret_key, self._client)
         self._endpoint_url = self._endpoint(endpoint)
@@ -198,10 +198,8 @@ class AWSClient(object):
         """
         if headers is None:
             headers = {}
-        (signed_headers,
-         signed_url) = self._signed_request(method, path, query_args or {},
-                                            dict(headers), body or b'')
-
+        signed_headers, signed_url = self._signed_request(
+            method, path, query_args or {}, dict(headers), body or b'')
         return httpclient.HTTPRequest(signed_url, method,
                                       signed_headers, body,
                                       connect_timeout=self.CONNECT_TIMEOUT,
@@ -220,8 +218,7 @@ class AWSClient(object):
                                                  self._service,
                                                  self._region)
 
-    @staticmethod
-    def _get_client_adapter():
+    def _get_client_adapter(self):
         """Return a HTTP client
 
         :rtype: :py:class:`tornado.httpclient.HTTPClient`
@@ -431,6 +428,8 @@ class AsyncAWSClient(AWSClient):
     :param str secret_key: The secret access key
     :param str endpoint: Override the base endpoint URL
     :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
+    :param bool use_curl: Use Tornado's CurlAsyncHTTPClient
+    :param tornado.ioloop.IOLoop io_loop: Specify the IOLoop to use
     :raises: :py:class:`tornado_aws.exceptions.ConfigNotFound`
     :raises: :py:class:`tornado_aws.exceptions.ConfigParserError`
     :raises: :py:class:`tornado_aws.exceptions.NoCredentialsError`
@@ -440,11 +439,13 @@ class AsyncAWSClient(AWSClient):
     ASYNC = True
 
     def __init__(self, service, profile=None, region=None, access_key=None,
-                 secret_key=None, endpoint=None, max_clients=100):
-        self._ioloop = ioloop.IOLoop.current()
+                 secret_key=None, endpoint=None, max_clients=100,
+                 use_curl=False, io_loop=None):
+        self._ioloop = io_loop or ioloop.IOLoop.current()
         self._max_clients = max_clients
-        super(AsyncAWSClient, self).__init__(service, profile, region,
-                                             access_key, secret_key, endpoint)
+        self._use_curl = use_curl
+        super(AsyncAWSClient, self).__init__(
+            service, profile, region, access_key, secret_key, endpoint)
 
     def _get_client_adapter(self):
         """Return an asynchronous HTTP client adapter
@@ -452,6 +453,9 @@ class AsyncAWSClient(AWSClient):
         :rtype: :py:class:`tornado.httpclient.AsyncHTTPClient`
 
         """
+        if self._use_curl:
+            return curl_httpclient.CurlAsyncHTTPClient(
+                self._ioloop, self._max_clients)
         return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
                                           force_instance=True)
 
