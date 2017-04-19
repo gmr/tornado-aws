@@ -18,7 +18,6 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
 
 DESC = 'A low-level Amazon Web Services API client for Tornado'
 
-TESTS_REQUIRE = ['nose', 'mock', 'coverage']
 
 setuptools.setup(name='tornado-aws',
                  version='0.5.0',
@@ -29,10 +28,10 @@ setuptools.setup(name='tornado-aws',
                  url='http://tornado-aws.readthedocs.org',
                  packages=['tornado_aws'],
                  package_data={'': ['LICENSE', 'README.rst',
-                                    'requirements.txt']},
+                                    'requires/installation.txt']},
                  include_package_data=True,
-                 install_requires=['tornado'],
-                 tests_require=TESTS_REQUIRE,
+                 install_requires=open('requires/installation.txt').read(),
+                 tests_require=open('requires/testing.txt').read(),
                  license='BSD',
                  classifiers=CLASSIFIERS,
                  zip_safe=True)
