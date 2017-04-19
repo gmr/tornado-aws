@@ -9,7 +9,7 @@ python:
   - 3.4
   - 3.5
 before_install:
-  - docker run -d --name=localstack -p 4567-4578:4567-4578 -p 8080:8080 atlassianlabs/localstack
+  - docker run -d --name=dynalite -p 8000:8000 rajatvig/dynalite-alpine:latest
 install:
   - pip install -r requirements.txt
   - pip install -r test-requirements.txt
@@ -30,5 +30,5 @@ cache:
   directories:
     - $HOME/.pip-cache/
 after_script:
-  - docker stop localstack
-  - docker rm localstack
+  - docker stop dynalite
+  - docker rm dynalite

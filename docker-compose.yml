@@ -1,5 +1,4 @@
-localstack:
-  image: atlassianlabs/localstack
+dynalite:
+  image: rajatvig/dynalite-alpine:latest
   ports:
-    - 4567-4578:4567-4578
-    - 8080:8080
+    - 8000:8000

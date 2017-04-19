@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import uuid
 
 from tornado import testing
@@ -61,8 +62,11 @@ class DynamoDBTestCase(testing.AsyncTestCase):
 
     def setUp(self):
         super(DynamoDBTestCase, self).setUp()
+        os.environ.pop('AWS_CONFIG_FILE', None)
+        os.environ.pop('AWS_SHARED_CREDENTIALS_FILE', None)
+        os.environ.pop('AWS_DEFAULT_PROFILE', None)
         self.client = tornado_aws.AsyncAWSClient(
-            'dynamodb', endpoint='http://localhost:4569')
+            'dynamodb', endpoint='http://localhost:8000')
 
     @testing.gen_test
     def test_create_table(self):
@@ -85,4 +89,4 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
     def setUp(self):
         super(DynamoDBTestCase, self).setUp()
         self.client = tornado_aws.AsyncAWSClient(
-            'dynamodb', endpoint='http://localhost:4569', use_curl=True)
+            'dynamodb', endpoint='http://localhost:8000', use_curl=True)
