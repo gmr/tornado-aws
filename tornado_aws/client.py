@@ -303,9 +303,10 @@ class AWSClient(object):
         headers.update({
             'Content-Length': str(len(body)),
             'Date': amz_date,
-            'Host': self._host,
             'X-Amz-Content-sha256': payload_hash
         })
+
+        headers.setdefault('Host', self._host)
 
         # Temporary auth security token
         if self._auth_config.security_token:
@@ -468,7 +469,7 @@ class AsyncAWSClient(AWSClient):
         return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
                                           force_instance=True)
 
-    def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
+    def fetch(self, method, path='/', query_args=None, headers=None, body=None,
               _recursed=False):
         """Executes a request, returning an
         :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.

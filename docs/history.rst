@@ -3,6 +3,11 @@
 Version History
 ===============
 
+0.7.0 (2017-06-02)
+------------------
+ - Don't overwrite the ``Host`` HTTP header if it's set
+ - Change fetch body arg default to None
+
 0.6.0 (2017-04-18)
 ------------------
  - Add support for using ``curl_httpclient.CurlAsyncHTTPClient``
