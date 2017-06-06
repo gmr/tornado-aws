@@ -183,6 +183,9 @@ class AWSClient(object):
         """
         if not isinstance(error, httpclient.HTTPError):
             return
+        elif not hasattr(error, 'response'):
+            LOGGER.error('Error has no response: %r', error)
+            return
         if error.code == 400:
             try:
                 payload = json.loads(error.response.body.decode('utf-8'))

@@ -3,6 +3,10 @@
 Version History
 ===============
 
+0.7.2 (2017-06-03)
+------------------
+ - What type of error is it if it has no response? Odd.
+
 0.7.1 (2017-06-02)
 ------------------
  - Getting error response back that we can't decode, log it
