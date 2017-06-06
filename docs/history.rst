@@ -3,11 +3,15 @@
 Version History
 ===============
 
-0.7.2 (2017-06-03)
+0.7.3 (2017-06-06)
+------------------
+ - The error was introduced in 0.7.1, redeclaring ``error``. Fix that.
+
+0.7.2 (2017-06-06)
 ------------------
  - What type of error is it if it has no response? Odd.
 
-0.7.1 (2017-06-02)
+0.7.1 (2017-06-05)
 ------------------
  - Getting error response back that we can't decode, log it
 

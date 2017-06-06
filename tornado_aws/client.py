@@ -183,15 +183,13 @@ class AWSClient(object):
         """
         if not isinstance(error, httpclient.HTTPError):
             return
-        elif not hasattr(error, 'response'):
-            LOGGER.error('Error has no response: %r', error)
-            return
-        if error.code == 400:
+        if error.code >= 400 and error.response is not None:
             try:
                 payload = json.loads(error.response.body.decode('utf-8'))
-            except json.JSONDecodeError as error:
-                LOGGER.error('Error decoding response: %r [%r]',
-                             error.response, error.response.body)
+            except (AttributeError, json.JSONDecodeError) as err:
+                LOGGER.error('Error decoding response as JSON (%s): %r %r',
+                             err, error.response,
+                             getattr(error.response, 'body', None))
                 return
             if isinstance(payload, dict) and '__type' in payload:
                 return payload
