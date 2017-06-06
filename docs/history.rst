@@ -3,6 +3,10 @@
 Version History
 ===============
 
+0.7.1 (2017-06-02)
+------------------
+ - Getting error response back that we can't decode, log it
+
 0.7.0 (2017-06-02)
 ------------------
  - Don't overwrite the ``Host`` HTTP header if it's set
