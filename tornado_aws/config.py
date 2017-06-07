@@ -10,6 +10,7 @@ import json
 import logging
 from os import path
 import os
+import socket
 
 from tornado import concurrent, httpclient, ioloop
 
@@ -53,7 +54,7 @@ def get_region(profile):
     except exceptions.ConfigNotFound:
         try:
             return _request_region_from_instance()
-        except (httpclient.HTTPError, OSError) as error:
+        except (httpclient.HTTPError, OSError, socket.error) as error:
             LOGGER.error('Error fetching from EC2 Instance Metadata (%s)',
                          error)
             raise exceptions.ConfigNotFound(path=file_path)
