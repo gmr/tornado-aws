@@ -1,6 +1,7 @@
 coverage
 codecov
 flake8
+futures
 mock
 nose
 pycurl

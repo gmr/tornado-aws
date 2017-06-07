@@ -2,3 +2,8 @@ dynalite:
   image: rajatvig/dynalite-alpine:latest
   ports:
     - 8000:8000
+
+s3:
+  image: verespej/fake-s3:latest
+  ports:
+    - 4567:4567
