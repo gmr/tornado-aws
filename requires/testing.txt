@@ -1,6 +1,7 @@
 coverage
 codecov
 flake8
+import mock
 nose
 pycurl
 pylint
