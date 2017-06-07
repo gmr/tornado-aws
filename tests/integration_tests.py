@@ -157,11 +157,11 @@ class S3TestCase(testing.AsyncTestCase):
         headers['x-amz-server-side-encryption'] = 'AES256'
         response = yield self.client.fetch(
             'PUT', '/{}'.format(key), headers=headers, body=value)
-        return response.code == 200
+        raise gen.Return(response.code == 200)
 
     @testing.gen_test
     def test_store_and_get(self):
-        result = yield self.client.fetch(
+        yield self.client.fetch(
             'PUT', '/', self.headers, body=CREATE_BUCKET_BODY.encode('utf-8'))
         record = {
             'id': str(uuid.uuid4()),
