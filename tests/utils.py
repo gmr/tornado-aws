@@ -23,4 +23,3 @@ def clear_environment():
     os.environ.pop('AWS_DEFAULT_PROFILE', None)
     os.environ.pop('AWS_ACCESS_KEY_ID', None)
     os.environ.pop('AWS_SECRET_ACCESS_KEY', None)
-    os.environ.pop('AWS_DEFAULT_REGION', None)
