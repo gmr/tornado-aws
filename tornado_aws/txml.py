@@ -5,8 +5,8 @@ XML Deserialization
 Parse XML return content and return it as a dict.
 
 """
-from collections import defaultdict
-from xml.etree import ElementTree as etree
+import collections
+import xml.etree.ElementTree as ET
 
 
 def loads(content):
@@ -18,8 +18,8 @@ def loads(content):
 
     """
     try:
-        return _xml_to_dict(etree.XML(content))
-    except etree.ParseError as error:
+        return _xml_to_dict(ET.XML(content))
+    except ET.ParseError as error:
         raise ValueError(str(error))
 
 
@@ -33,7 +33,7 @@ def _xml_to_dict(t):
     d = {t.tag: {} if t.attrib else None}
     children = list(t)
     if children:
-        dd = defaultdict(list)
+        dd = collections.defaultdict(list)
         for dc in map(_xml_to_dict, children):
             for k, v in dc.items():
                 dd[k].append(v)

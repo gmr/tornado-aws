@@ -12,9 +12,15 @@ import json
 import logging
 import os
 try:
-    from urllib import parse as _urlparse
+    from urllib.parse import urlparse
 except ImportError:  # pragma: nocover
-    import urlparse as _urlparse
+    from urlparse import urlparse
+
+try:
+    from urllib.parse import quote
+except ImportError:  # pragma: nocover
+    from urllib import quote
+
 
 from tornado import concurrent, httpclient, ioloop
 
@@ -23,7 +29,7 @@ try:
 except ImportError:  # pragma: nocover
     curl_httpclient = None
 
-from tornado_aws import config, exceptions, xml
+from tornado_aws import config, exceptions, txml
 
 LOGGER = logging.getLogger(__name__)
 
@@ -250,7 +256,7 @@ class AWSClient(object):
         :raises: ValueError
 
         """
-        payload = xml.loads(content.decode('utf-8'))
+        payload = txml.loads(content.decode('utf-8'))
         if 'Error' in payload:
             return payload['Error']
         elif 'Errors' in payload and 'Error' in payload['Errors']:
@@ -333,7 +339,7 @@ class AWSClient(object):
         :return: str
 
         """
-        return _urlparse.urlparse(url).netloc
+        return urlparse(url).netloc
 
     @staticmethod
     def _quote(value):
@@ -344,7 +350,7 @@ class AWSClient(object):
         :rtype: str
 
         """
-        return _urlparse.quote(value, safe='').replace('%7E', '~')
+        return quote(value, safe='').replace('%7E', '~')
 
     @staticmethod
     def _sign(key, msg):
