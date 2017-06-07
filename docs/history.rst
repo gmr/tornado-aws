@@ -3,6 +3,12 @@
 Version History
 ===============
 
+0.8.0 (2017-06-06)
+------------------
+ - Rework error processing to support ``application/json``,
+    ``application/x-amz-json-1.0``, ``application/x-amz-json-1.0`` and
+    XML based responses (S3, E2, others)
+
 0.7.3 (2017-06-06)
 ------------------
  - The error was introduced in 0.7.1, redeclaring ``error``. Fix that.
