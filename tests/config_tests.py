@@ -7,8 +7,7 @@ import uuid
 
 import mock
 
-from tornado import concurrent, httpclient, testing, web
-from tornado.concurrent import futures
+from tornado import concurrent, httpclient, testing
 
 from tornado_aws import config, exceptions
 
@@ -124,32 +123,7 @@ class ResolvCredentialsTestCase(unittest.TestCase):
                 config.Authorization('foo', client=httpclient.HTTPClient())
 
 
-class RequestHandler(web.RequestHandler):
-    def get(self, *args, **kwargs):
-        if args[0] == 'latest/meta-data/iam/security-credentials/':
-            self.write(self.get_argument('role', uuid.uuid4().hex))
-        elif args[0] == 'latest/dynamic/instance-identity/document':
-            self.write(
-                {'region': self.get_argument('region', uuid.uuid4().hex)})
-        elif args[0] == \
-            'latest/meta-data/iam/security-credentials/{}'.format(
-                self.get_argument('role', uuid.uuid4().hex)):
-            self.write({
-                'AccessKeyId':
-                    self.get_argument('access_key', uuid.uuid4().hex),
-                'SecretAccessKey':
-                    self.get_argument('secret_key', uuid.uuid4().hex),
-                'Expiration': datetime.datetime.now().isoformat(),
-                'Token': self.get_argument('token', uuid.uuid4().hex)})
-        else:
-            raise web.HTTPError(400, 'Invalid Path')
-
-
-class RequestRegionTestCase(testing.AsyncHTTPTestCase):
-    executor = futures.ThreadPoolExecutor(10)
-
-    def get_app(self):
-        return web.Application([(r'/(.*)', RequestHandler)])
+class RequestRegionTestCase(utils.AsyncHTTPTestCase):
 
     @concurrent.run_on_executor
     def make_request(self, expectation):
@@ -164,11 +138,7 @@ class RequestRegionTestCase(testing.AsyncHTTPTestCase):
         self.assertEqual(value, expectation)
 
 
-class GetRoleTestCase(testing.AsyncHTTPTestCase):
-    executor = futures.ThreadPoolExecutor(10)
-
-    def get_app(self):
-        return web.Application([(r'/(.*)', RequestHandler)])
+class GetRoleTestCase(utils.AsyncHTTPTestCase):
 
     @concurrent.run_on_executor
     def make_request(self, expectation):
@@ -212,11 +182,7 @@ class GetRoleTestCase(testing.AsyncHTTPTestCase):
                     yield obj._get_role_async()
 
 
-class GetInstanceCredentialsTestCase(testing.AsyncHTTPTestCase):
-    executor = futures.ThreadPoolExecutor(10)
-
-    def get_app(self):
-        return web.Application([(r'/(.*)', RequestHandler)])
+class GetInstanceCredentialsTestCase(utils.AsyncHTTPTestCase):
 
     @concurrent.run_on_executor
     def make_request(self, role, access_key, secret_key, token):
@@ -279,11 +245,7 @@ class GetInstanceCredentialsTestCase(testing.AsyncHTTPTestCase):
                     yield obj._get_instance_credentials_async(role)
 
 
-class FetchCredentialsTestCase(testing.AsyncHTTPTestCase):
-    executor = futures.ThreadPoolExecutor(10)
-
-    def get_app(self):
-        return web.Application([(r'/(.*)', RequestHandler)])
+class FetchCredentialsTestCase(utils.AsyncHTTPTestCase):
 
     @concurrent.run_on_executor
     def make_request(self, role, access_key, secret_key, token):
@@ -373,11 +335,7 @@ class FetchCredentialsTestCase(testing.AsyncHTTPTestCase):
                     yield obj._fetch_credentials_async()
 
 
-class RefreshTestCase(testing.AsyncHTTPTestCase):
-    executor = futures.ThreadPoolExecutor(10)
-
-    def get_app(self):
-        return web.Application([(r'/(.*)', RequestHandler)])
+class RefreshTestCase(utils.AsyncHTTPTestCase):
 
     @concurrent.run_on_executor
     def make_request(self, role, access_key, secret_key, token):
@@ -485,7 +443,7 @@ class RefreshTestCase(testing.AsyncHTTPTestCase):
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             obj = config.Authorization('default', client=client)
             with mock.patch.object(
-                obj, '_get_instance_credentials_async') as get_creds:
+                    obj, '_get_instance_credentials_async') as get_creds:
                 future = concurrent.Future()
                 future.set_exception(httpclient.HTTPError(502))
                 get_creds.return_value = future

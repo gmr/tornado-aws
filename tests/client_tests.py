@@ -1,17 +1,20 @@
 import contextlib
 import io
 import json
+import logging
 import os
 import tempfile
 import unittest
 import uuid
 
 import mock
-from tornado import httpclient, httputil
+from tornado import concurrent, httpclient, httputil, testing
 
-from tornado_aws import client, exceptions
+from tornado_aws import client, config, exceptions
 
 from . import utils
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestCase(unittest.TestCase):
@@ -315,7 +318,7 @@ class ProcessErrorTestCase(TestCase):
             self.assertEqual(obj._process_error(error), (False, None))
 
 
-class ClientFetchTestCase(TestCase):
+class MockTestCase(TestCase):
 
     @staticmethod
     def mock_ok_response():
@@ -364,10 +367,13 @@ class ClientFetchTestCase(TestCase):
         response = httpclient.HTTPResponse(request, 400, headers, stream)
         return httpclient.HTTPError(400, 'Bad Request', response)
 
+
+class ClientFetchTestCase(MockTestCase):
+
     def test_fetch_success(self):
         with self.client_with_default_creds('s3') as obj:
             with mock.patch.object(obj._client, 'fetch') as fetch:
-                fetch.return_value=self.mock_ok_response()
+                fetch.return_value = self.mock_ok_response()
                 body = json.dumps({'foo': 'bar'}).encode('utf-8')
                 result = obj.fetch(
                     'POST', '/', body=body,
@@ -437,7 +443,8 @@ class ClientFetchTestCase(TestCase):
                                              self.mock_ok_response()]
                         result = obj.fetch(
                             'GET', '/',
-                            query_args={'list_type': '2', 'delimiter': '/'},
+                            query_args={'list_type': '2',
+                                        'delimiter': '/'},
                             headers={'Host': 'bucket.s3.amazonaws.com'})
                         self.assertEqual(result.code, 200)
                         reset.assert_called_once()
@@ -454,9 +461,169 @@ class ClientFetchTestCase(TestCase):
                         with self.assertRaises(exceptions.AWSError):
                             result = obj.fetch(
                                 'GET', '/',
-                                query_args={'list_type': '2', 'delimiter': '/'},
+                                query_args={'list_type': '2',
+                                            'delimiter': '/'},
                                 headers={'Host': 'bucket.s3.amazonaws.com'})
                             self.assertEqual(result.code, 200)
                         self.assertEqual(reset.call_count, 2)
                         self.assertEqual(fetch.call_count, 2)
                         self.assertEqual(refresh.call_count, 2)
+
+
+class AsyncClientFetchTestCase(MockTestCase, utils.AsyncHTTPTestCase):
+
+    CLIENT = client.AsyncAWSClient
+
+    @testing.gen_test
+    def test_fetch_success(self):
+        with self.client_with_default_creds('s3') as obj:
+            with mock.patch.object(obj._client, 'fetch') as fetch:
+                future = concurrent.Future()
+                future.set_result(self.mock_ok_response())
+                fetch.return_value = future
+                body = json.dumps({'foo': 'bar'}).encode('utf-8')
+                result = yield obj.fetch(
+                    'POST', '/', body=body,
+                    headers={'x-amz-target': 'DynamoDB_20120810.CreateTable',
+                             'Content-Type': 'application/x-amz-json-1.0'})
+                self.assertEqual(result.code, 200)
+                fetch.assert_called_once()
+                request = fetch.call_args_list[0][0][0]
+                self.assertEqual(request.method, 'POST')
+                self.assertEqual(request.headers['Content-Type'],
+                                 'application/x-amz-json-1.0')
+
+    @testing.gen_test
+    def test_fetch_needs_credentials(self):
+        role = uuid.uuid4().hex
+        access_key = uuid.uuid4().hex
+        secret_key = uuid.uuid4().hex
+        token = uuid.uuid4().hex
+        url = self.get_url(
+            '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
+            'key={}&secret_key={}&token={}'.format(
+                role, role, access_key, secret_key, token))
+        with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
+            cfg = config.Authorization(
+                'default', client=httpclient.AsyncHTTPClient())
+            with self.client_with_default_creds(
+                    's3', endpoint=self.get_url('/api')) as obj:
+                obj._auth_config = cfg
+                result = yield obj.fetch(
+                    'GET', '/?expectation={}'.format(token))
+                self.assertEqual(result.code, 200)
+
+    @testing.gen_test
+    def test_fetch_expired_credentials(self):
+        cfg_client = httpclient.AsyncHTTPClient()
+        role = uuid.uuid4().hex
+        access_key = uuid.uuid4().hex
+        secret_key = uuid.uuid4().hex
+        token = uuid.uuid4().hex
+        url = self.get_url(
+            '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
+            'key={}&secret_key={}&token={}'.format(
+                role, role, access_key, secret_key, token))
+        with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
+            cfg = config.Authorization('default', client=cfg_client)
+            with self.client_with_default_creds(
+                    's3', endpoint=self.get_url('/api')) as obj:
+                obj._auth_config = cfg
+                with mock.patch.object(obj._client, 'fetch') as fetch:
+                    future1 = concurrent.Future()
+                    future1.set_exception(self.mock_auth_exception())
+                    future2 = concurrent.Future()
+                    future2.set_result(self.mock_ok_response())
+                    fetch.side_effect = [future1, future2]
+                    result = yield obj.fetch('GET', '/api')
+                    self.assertEqual(result.code, 200)
+
+    @testing.gen_test
+    def test_fetch_refresh_failure(self):
+        cfg_client = httpclient.AsyncHTTPClient()
+        role = uuid.uuid4().hex
+        access_key = uuid.uuid4().hex
+        secret_key = uuid.uuid4().hex
+        token = uuid.uuid4().hex
+        url = self.get_url(
+            '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
+            'key={}&secret_key={}&token={}'.format(
+                role, role, access_key, secret_key, token))
+        with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
+            cfg = config.Authorization('default', client=cfg_client)
+            with self.client_with_default_creds(
+                    's3', endpoint=self.get_url('/api')) as obj:
+                obj._auth_config = cfg
+                cfg.reset()
+                with mock.patch.object(cfg, 'refresh') as refresh:
+                    future = concurrent.Future()
+                    future.set_exception(httpclient.HTTPError(599))
+                    refresh.return_value = future
+                    with self.assertRaises(httpclient.HTTPError):
+                        yield obj.fetch('GET', '/api')
+
+    @testing.gen_test
+    def test_fetch_credentials_fail(self):
+        cfg_client = httpclient.AsyncHTTPClient()
+        role = uuid.uuid4().hex
+        access_key = uuid.uuid4().hex
+        secret_key = uuid.uuid4().hex
+        token = uuid.uuid4().hex
+        url = self.get_url(
+            '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
+            'key={}&secret_key={}&token={}'.format(
+                role, role, access_key, secret_key, token))
+        with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
+            cfg = config.Authorization('default', client=cfg_client)
+            with mock.patch.object(cfg, '_get_role_async') as get_role:
+                role_future = concurrent.Future()
+                role_future.set_result(role)
+                get_role.return_value = role_future
+                with self.client_with_default_creds(
+                        's3', endpoint=self.get_url('/api')) as obj:
+                    obj._auth_config = cfg
+                    with mock.patch.object(obj._client, 'fetch') as fetch:
+                        future1 = concurrent.Future()
+                        future1.set_exception(self.mock_auth_exception())
+                        future2 = concurrent.Future()
+                        future2.set_exception(self.mock_auth_exception())
+                        fetch.side_effect = [future1, future2]
+                        with self.assertRaises(exceptions.AWSError):
+                            yield obj.fetch('GET', '/api')
+
+    @testing.gen_test
+    def test_fetch_credentials_and_request_fail(self):
+        cfg_client = httpclient.AsyncHTTPClient()
+        role = uuid.uuid4().hex
+        access_key = uuid.uuid4().hex
+        secret_key = uuid.uuid4().hex
+        token = uuid.uuid4().hex
+        url = self.get_url(
+            '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
+            'key={}&secret_key={}&token={}'.format(
+                role, role, access_key, secret_key, token))
+        with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
+            cfg = config.Authorization('default', client=cfg_client)
+            with mock.patch.object(cfg, '_get_role_async') as get_role:
+                role_future = concurrent.Future()
+                role_future.set_result(role)
+                get_role.return_value = role_future
+                with self.client_with_default_creds(
+                        's3', endpoint=self.get_url('/api')) as obj:
+                    obj._auth_config = cfg
+                    with mock.patch.object(obj._client, 'fetch') as fetch:
+                        future1 = concurrent.Future()
+                        future1.set_exception(self.mock_auth_exception())
+                        future2 = concurrent.Future()
+                        future2.set_exception(self.mock_error_exception())
+                        fetch.side_effect = [future1, future2]
+                        with self.assertRaises(exceptions.AWSError):
+                            yield obj.fetch('GET', '/api')
+
+
+class NoCurlAsyncTestCase(unittest.TestCase):
+
+    def test_no_curl_raises_exception(self):
+        with mock.patch('tornado_aws.client.curl_httpclient', None):
+            with self.assertRaises(exceptions.CurlNotInstalledError):
+                client.AsyncAWSClient('s3', region='test', use_curl=True)
