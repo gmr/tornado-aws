@@ -10,6 +10,7 @@ python:
   - 3.6
 before_install:
   - docker run -d --name=dynalite -p 8000:8000 rajatvig/dynalite-alpine:latest
+  - docker run -d --name=s3 -p 4567:4567 verespej/fake-s3:latest
 install:
   - pip install -r requires/testing.txt
 script: nosetests
@@ -29,5 +30,5 @@ cache:
   directories:
     - $HOME/.pip-cache/
 after_script:
-  - docker stop dynalite
-  - docker rm dynalite
+  - docker stop dynalite s3
+  - docker rm dynalite s3
