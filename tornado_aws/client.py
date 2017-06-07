@@ -11,6 +11,7 @@ import hmac
 import json
 import logging
 import os
+import socket
 try:
     from urllib.parse import urlparse
 except ImportError:  # pragma: nocover
@@ -168,9 +169,11 @@ class AWSClient(object):
         try:
             result = self._client.fetch(request, raise_error=True)
             return result
+        except (OSError, socket.error) as error:
+            LOGGER.error('Error making request: %s', error)
+            raise exceptions.AWSClientException()
         except httpclient.HTTPError as error:
             need_credentials, aws_error = self._process_error(error)
-            LOGGER.debug('err: %r, %r, %r', need_credentials, aws_error, self._auth_config.local_credentials)
             if need_credentials and not self._auth_config.local_credentials:
                 self._auth_config.reset()
                 if not recursed:
@@ -304,6 +307,7 @@ class AWSClient(object):
             headers = {}
         signed_headers, signed_url = self._signed_request(
             method, path, query_args or {}, dict(headers), body or b'')
+        LOGGER.debug('Signed URL: %s', signed_url)
         return httpclient.HTTPRequest(signed_url, method,
                                       signed_headers, body,
                                       connect_timeout=self.CONNECT_TIMEOUT,
@@ -580,20 +584,24 @@ class AsyncAWSClient(AWSClient):
         def on_response(response):
             exception = response.exception()
             if exception:
-                need_credentials, aws_error = self._process_error(exception)
-                if need_credentials and \
-                        not self._auth_config.local_credentials:
-                    self._auth_config.reset()
-                    if not recursed:
-                        def on_retry(retry):
-                            if not self._future_exception(retry, future):
-                                future.set_result(retry.result())
+                if isinstance(exception, httpclient.HTTPError):
+                    need_credentials, aws_error = self._process_error(exception)
+                    if need_credentials and \
+                            not self._auth_config.local_credentials:
+                        self._auth_config.reset()
+                        if not recursed:
+                            def on_retry(retry):
+                                if not self._future_exception(retry, future):
+                                    future.set_result(retry.result())
 
-                        request = self.fetch(method, path, query_args,
-                                             headers, body, True)
-                        self._ioloop.add_future(request, on_retry)
-                        return
-                future.set_exception(aws_error if aws_error else exception)
+                            request = self.fetch(method, path, query_args,
+                                                 headers, body, True)
+                            self._ioloop.add_future(request, on_retry)
+                            return
+                    future.set_exception(aws_error if aws_error else exception)
+                else:
+                    LOGGER.error('Error making request: %s', exception)
+                    future.set_exception(exceptions.AWSClientException())
             else:
                 future.set_result(response.result())
 

@@ -8,6 +8,7 @@ Version History
  - Rework error processing to support ``application/json``,
     ``application/x-amz-json-1.0``, ``application/x-amz-json-1.0`` and
     XML based responses (S3, E2, others)
+ - Move to 100% test coverage \o/
 
 0.7.3 (2017-06-06)
 ------------------

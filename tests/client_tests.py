@@ -388,6 +388,14 @@ class ClientFetchTestCase(MockTestCase):
                 self.assertEqual(request.headers['Content-Type'],
                                  'application/x-amz-json-1.0')
 
+    def test_fetch_os_error(self):
+        with self.client_with_default_creds('s3') as obj:
+            with mock.patch.object(obj._client, 'fetch') as fetch:
+                fetch.side_effect = OSError()
+                body = json.dumps({'foo': 'bar'})
+                with self.assertRaises(exceptions.AWSClientException):
+                    obj.fetch('POST', '/', body=body)
+
     def test_fetch_no_headers(self):
         with self.client_with_default_creds('s3') as obj:
             with mock.patch.object(obj._client, 'fetch') as fetch:
@@ -619,6 +627,17 @@ class AsyncClientFetchTestCase(MockTestCase, utils.AsyncHTTPTestCase):
                         fetch.side_effect = [future1, future2]
                         with self.assertRaises(exceptions.AWSError):
                             yield obj.fetch('GET', '/api')
+
+    @testing.gen_test
+    def test_fetch_os_error(self):
+        with self.client_with_default_creds(
+                's3', endpoint=self.get_url('/api')) as obj:
+            with mock.patch.object(obj._client, 'fetch') as fetch:
+                future = concurrent.Future()
+                future.set_exception(OSError)
+                fetch.return_value = future
+                with self.assertRaises(exceptions.AWSClientException):
+                    yield obj.fetch('GET', '/api')
 
 
 class NoCurlAsyncTestCase(unittest.TestCase):
