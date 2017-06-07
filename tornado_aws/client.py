@@ -13,27 +13,47 @@ import logging
 import os
 try:
     from urllib import parse as _urlparse
-except ImportError:
+except ImportError:  # pragma: nocover
     import urlparse as _urlparse
 
 from tornado import concurrent, httpclient, ioloop
 
 try:
     from tornado import curl_httpclient
-except ImportError:
+except ImportError:  # pragma: nocover
     curl_httpclient = None
 
-from tornado_aws import config, exceptions
+from tornado_aws import config, exceptions, xml
 
 LOGGER = logging.getLogger(__name__)
 
-MIME_AWZ_JSON = 'application/x-amz-json-1.0'
+MIME_AWZ_JSON = 'application/x-amz-json-1.1'
+
+_AWZ_CONTENT_TYPES = [
+    'application/json',
+    'application/x-amz-json-1.0',
+    'application/x-amz-json-1.1'
+]
 
 _REFRESH_EXCEPTIONS = [
-    'com.amazon.coral.service#InvalidSignatureException',
-    'com.amazon.coral.service#UnrecognizedClientException',
-    'com.amazon.coral.service#ExpiredTokenException'
+    'AuthFailure',
+    'AuthMissingFailure',
+    'AWS.InvalidAccount',
+    'ExpiredTokenException',
+    'InvalidSignatureException',
+    'MissingAuthenticationTokenException',
+    'UnrecognizedClientException'
 ]
+
+_REFRESH_XML_EXCEPTIONS = [
+    'AuthFailure',
+    'ExpiredToken',
+    'InvalidClientTokenId',
+    'InvalidSecurity',
+    'MissingAuthenticationToken',
+    'SignatureDoesNotMatch'
+]
+
 
 _HEADER_FORMAT = '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
 
@@ -114,7 +134,7 @@ class AWSClient(object):
         self._host = self._hostname(self._endpoint_url)
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=b'',
-              _recursed=False):
+              recursed=False):
         """Executes a request, returning an
         :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
 
@@ -127,6 +147,7 @@ class AWSClient(object):
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
         :param bytes body: The request body
+        :param bool recursed: Internally invoked if it's a recursive fetch
         :rtype: :class:`~tornado.httpclient.HTTPResponse`
         :raises: :class:`~tornado.httpclient.HTTPError`
         :raises: :class:`~tornado_aws.exceptions.NoCredentialsError`
@@ -142,20 +163,107 @@ class AWSClient(object):
             result = self._client.fetch(request, raise_error=True)
             return result
         except httpclient.HTTPError as error:
-            awz_error = self._awz_error(error)
-            if awz_error:
-                if self._credentials_error(awz_error):
-                    if not self._auth_config.local_credentials:
-                        if not _recursed:
-                            self._auth_config.refresh()
-                            return self.fetch(method, path, query_args,
-                                              headers, body, True)
-                        else:
-                            self._auth_config.reset()
+            need_credentials, aws_error = self._process_error(error)
+            LOGGER.debug('err: %r, %r, %r', need_credentials, aws_error, self._auth_config.local_credentials)
+            if need_credentials and not self._auth_config.local_credentials:
+                self._auth_config.reset()
+                if not recursed:
+                    return self.fetch(method, path, query_args,
+                                      headers, body, True)
+            raise aws_error if aws_error else error
 
-                raise exceptions.AWSError(type=awz_error['__type'],
-                                          message=awz_error['message'])
-            raise
+    def _process_error(self, error):
+        """Attempt to process the error coming from AWS. Returns ``True``
+        if the client should attempt to fetch credentials and the AWSError
+        exception to raise if the client did not have an authentication error.
+
+        :param tornado.httpclient.HTTPError error: The HTTP error
+        :rtype: (tuple, tornado_aws.exceptions.AWSError)
+
+        """
+        LOGGER.error('Error: %r', error)
+        if error.code == 599:
+            return False, None
+        elif error.code == 400 and self._awz_response(error.response):
+            awz_error = self._parse_awz_error(error.response.body)
+            return ((awz_error and
+                     awz_error['__type'] in _REFRESH_EXCEPTIONS),
+                    exceptions.AWSError(
+                        type=awz_error['__type'],
+                        message=awz_error['message']))
+        try:
+            xml_error = self._parse_xml_error(error.response.body)
+        except ValueError:
+            LOGGER.debug('Could not fallback to XML: %r', error)
+            return False, None
+
+        return ((xml_error and
+                xml_error['Code'] in _REFRESH_XML_EXCEPTIONS),
+                self._aws_error_from_xml(xml_error))
+
+    @staticmethod
+    def _aws_error_from_xml(error):
+        """Return an AWSError exception for an XML error response, given the
+        variation in field names.
+
+        :param dict error: The parsed XML error
+        :rtype: tornado_aws.exceptions.AWSError
+
+        """
+        return exceptions.AWSError(
+            type=error['Code'], message=error['Message'],
+            request_id=error.get('RequestId', error.get('x-amzn-RequestId')),
+            resource=error.get('Resource'))
+
+    @staticmethod
+    def _awz_response(response):
+        """Returns ``True`` if the HTTPResponse headers indicate it is
+        an AWS style response
+
+        :param tornado.httpclient.HTTPResponse: The HTTP response
+        :rtype: bool
+
+        """
+        return response.headers.get('Content-Type') in _AWZ_CONTENT_TYPES
+
+    @staticmethod
+    def _parse_awz_error(content):
+        """Returns the AWZ error parsed out of the HTTPError that was raised.
+
+        :param bytes content: The response error content
+        :rtype: dict|None
+
+        """
+        payload = json.loads(content.decode('utf-8'))
+        if isinstance(payload, dict) and '__type' in payload:
+            if '#' in payload['__type']:
+                payload['__type'] = \
+                    payload['__type'][payload['__type'].index('#') + 1:]
+            return payload
+
+    @staticmethod
+    def _parse_xml_error(content):
+        """Returns the XML error parsed out of the HTTPError that was raised.
+
+        :param bytes content: The response error content
+        :rtype: dict
+        :raises: ValueError
+
+        """
+        payload = xml.loads(content.decode('utf-8'))
+        if 'Error' in payload:
+            return payload['Error']
+        elif 'Errors' in payload and 'Error' in payload['Errors']:
+            return payload['Errors']['Error']
+        elif 'Response' in payload and 'Errors' in payload['Response'] \
+                and 'Error' in payload['Response']['Errors']:
+            payload['Response']['Errors']['Error']['RequestId'] = \
+                payload['Response'].get('RequestID')
+            return payload['Response']['Errors']['Error']
+        key = tuple(payload.keys())[0]
+        if 'Message' in payload[key]:
+            return {'Code': key, 'Message': payload[key]['Message']}
+        raise ValueError
 
     def _auth_header(self, amz_date, date_stamp, request_hash, signed_headers):
         """Return the Authorization string header value
@@ -172,27 +280,6 @@ class AWSClient(object):
                                      self._auth_config.access_key,
                                      scope,
                                      signed_headers, signature)
-
-    @staticmethod
-    def _awz_error(error):
-        """Returns the AWZ error parsed out of the HTTPError that was raised.
-
-        :param tornado.httpclient.HTTPError error: The error that was raised
-        :rtype: dict|None
-
-        """
-        if not isinstance(error, httpclient.HTTPError):
-            return
-        if error.code >= 400 and error.response is not None:
-            try:
-                payload = json.loads(error.response.body.decode('utf-8'))
-            except (AttributeError, json.JSONDecodeError) as err:
-                LOGGER.error('Error decoding response as JSON (%s): %r %r',
-                             err, error.response,
-                             getattr(error.response, 'body', None))
-                return
-            if isinstance(payload, dict) and '__type' in payload:
-                return payload
 
     def _create_request(self, method, path='/', query_args=None, headers=None,
                         body=b''):
@@ -258,19 +345,6 @@ class AWSClient(object):
 
         """
         return _urlparse.quote(value, safe='').replace('%7E', '~')
-
-    def _credentials_error(self, error):
-        """Returns ``True`` if the the error is related to authentication
-        errors that could be remedied by loading from ECS metadata and user
-        data API.
-
-        :param dict error: The AWZ error response
-        :rtype: bool
-
-        """
-        if self._auth_config.local_credentials:
-            return False
-        return error['__type'] in _REFRESH_EXCEPTIONS
 
     @staticmethod
     def _sign(key, msg):
@@ -440,7 +514,6 @@ class AsyncAWSClient(AWSClient):
     :param str secret_key: The secret access key
     :param str endpoint: Override the base endpoint URL
     :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
-    :param bool use_curl: Use Tornado's CurlAsyncHTTPClient
     :param tornado.ioloop.IOLoop io_loop: Specify the IOLoop to use
     :raises: :exc:`tornado_aws.exceptions.ConfigNotFound`
     :raises: :exc:`tornado_aws.exceptions.ConfigParserError`
@@ -476,7 +549,7 @@ class AsyncAWSClient(AWSClient):
                                           force_instance=True)
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=None,
-              _recursed=False):
+              recursed=False):
         """Executes a request, returning an
         :py:class:`HTTPResponse <tornado.httpclient.HTTPResponse>`.
 
@@ -489,6 +562,7 @@ class AsyncAWSClient(AWSClient):
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
         :param bytes body: The request body
+        :param bool recursed: Internal use only
         :rtype: :class:`~tornado.httpclient.HTTPResponse`
         :raises: :class:`~tornado.httpclient.HTTPError`
         :raises: :class:`~tornado_aws.exceptions.AWSError`
@@ -500,29 +574,20 @@ class AsyncAWSClient(AWSClient):
         def on_response(response):
             exception = response.exception()
             if exception:
-                awz_error = self._awz_error(exception)
-                if awz_error:
-                    if self._credentials_error(awz_error):
-                        self._auth_config.reset()
-                        if not self._auth_config.local_credentials:
-                            if not _recursed:
+                need_credentials, aws_error = self._process_error(exception)
+                if need_credentials and \
+                        not self._auth_config.local_credentials:
+                    self._auth_config.reset()
+                    if not recursed:
+                        def on_retry(retry):
+                            if not self._future_exception(retry, future):
+                                future.set_result(retry.result())
 
-                                def on_retry(retry):
-                                    if not self._future_exception(retry,
-                                                                  future):
-                                        future.set_result(retry.result())
-
-                                request = self.fetch(method, path, query_args,
-                                                     headers, body, True)
-                                self._ioloop.add_future(request, on_retry)
-                                return
-                    msg = awz_error.get('message', awz_error.get('Message'))
-                    if not msg:
-                        LOGGER.debug('awz_error without message: %r',
-                                     awz_error)
-                    exception = exceptions.AWSError(
-                        type=awz_error['__type'], message=msg)
-                future.set_exception(exception)
+                        request = self.fetch(method, path, query_args,
+                                             headers, body, True)
+                        self._ioloop.add_future(request, on_retry)
+                        return
+                future.set_exception(aws_error if aws_error else exception)
             else:
                 future.set_result(response.result())
 
