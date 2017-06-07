@@ -36,7 +36,7 @@ class TestCase(unittest.TestCase):
         handle.flush()
         handle.seek(0)
         os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
-        yield self.get_client(*args, **kwargs)
+        yield self.get_client(region='test', *args, **kwargs)
         handle.close()
 
     @contextlib.contextmanager
@@ -46,7 +46,7 @@ class TestCase(unittest.TestCase):
         handle.flush()
         handle.seek(0)
         os.environ['AWS_SHARED_CREDENTIALS_FILE'] = handle.name
-        yield self.get_client(*args, **kwargs)
+        yield self.get_client(region='test', *args, **kwargs)
         handle.close()
 
 
