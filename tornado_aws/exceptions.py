@@ -69,3 +69,12 @@ class NoProfileError(AWSClientException):
 
     """
     fmt = 'Profile ({profile}) not found ({path})'
+
+
+class RequestException(AWSClientException):
+    """Raised when a request failed due to a network issue.
+
+    :ivar error: The error which occured
+
+    """
+    fmt = 'An error occured making a request {error}'
