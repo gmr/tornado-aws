@@ -1,7 +1,7 @@
 from os import path
 import setuptools
 
-CLASSIFIERS = ['Development Status :: 5 - Stable',
+CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
                'Intended Audience :: Developers',
                'License :: OSI Approved :: BSD License',
                'Operating System :: OS Independent',
