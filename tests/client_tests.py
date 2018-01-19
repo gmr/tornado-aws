@@ -393,7 +393,7 @@ class ClientFetchTestCase(MockTestCase):
             with mock.patch.object(obj._client, 'fetch') as fetch:
                 fetch.side_effect = OSError()
                 body = json.dumps({'foo': 'bar'})
-                with self.assertRaises(exceptions.AWSClientException):
+                with self.assertRaises(exceptions.RequestException):
                     obj.fetch('POST', '/', body=body)
 
     def test_fetch_no_headers(self):
@@ -636,7 +636,7 @@ class AsyncClientFetchTestCase(MockTestCase, utils.AsyncHTTPTestCase):
                 future = concurrent.Future()
                 future.set_exception(OSError)
                 fetch.return_value = future
-                with self.assertRaises(exceptions.AWSClientException):
+                with self.assertRaises(exceptions.RequestException):
                     yield obj.fetch('GET', '/api')
 
 

@@ -171,7 +171,7 @@ class AWSClient(object):
             return result
         except (OSError, socket.error) as error:
             LOGGER.error('Error making request: %s', error)
-            raise exceptions.AWSClientException()
+            raise exceptions.RequestException(error=error)
         except httpclient.HTTPError as error:
             need_credentials, aws_error = self._process_error(error)
             if need_credentials and not self._auth_config.local_credentials:
@@ -601,7 +601,7 @@ class AsyncAWSClient(AWSClient):
                     future.set_exception(aws_error if aws_error else exception)
                 else:
                     LOGGER.error('Error making request: %s', exception)
-                    future.set_exception(exceptions.AWSClientException())
+                    future.set_exception(exceptions.RequestException(error=exception))
             else:
                 future.set_result(response.result())
 
