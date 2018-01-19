@@ -3,6 +3,11 @@
 Version History
 ===============
 
+1.0.0 (2018-01-19)
+------------------
+ - Add new exception type ``tornado_aws.exceptions.RequestException`` (#5 from `nvllsvm <https://github.com/nvllsvm>_`)
+ - Mark as stable in Trove classifiers
+
 0.8.0 (2017-06-06)
 ------------------
  - Rework error processing to support ``application/json``,

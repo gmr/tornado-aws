@@ -2,7 +2,7 @@ tornado-aws
 ===========
 ``tornado-aws`` is a low-level Amazon Web Services API client for Tornado.
 
-|Version| |Downloads| |Status| |Coverage| |License|
+|Version| |Status| |Coverage| |License|
 
 Contents:
 
@@ -42,9 +42,6 @@ Indices and tables
 
 .. |Coverage| image:: https://img.shields.io/codecov/c/github/gmr/tornado-aws.svg?
    :target: https://codecov.io/github/gmr/tornado-aws?branch=master
-
-.. |Downloads| image:: https://img.shields.io/pypi/dm/tornado-aws.svg?
-   :target: https://pypi.python.org/pypi/tornado-aws
 
 .. |License| image:: https://img.shields.io/pypi/l/tornado-aws.svg?
    :target: https://tornado-aws.readthedocs.org
