@@ -181,6 +181,10 @@ class AWSClient(object):
                                       headers, body, True)
             raise aws_error if aws_error else error
 
+    def close(self):
+        """Closes the underlying HTTP client, freeing any resources used."""
+        self._client.close()
+
     def _process_error(self, error):
         """Attempt to process the error coming from AWS. Returns ``True``
         if the client should attempt to fetch credentials and the AWSError
