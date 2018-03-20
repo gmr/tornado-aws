@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.1.0 (2018-03-19)
+------------------
+ - Add ``close`` method to ``AWSClient`` (#9 from `31z4 <https://github.com/31z4>_`)
+
 1.0.0 (2018-01-19)
 ------------------
  - Add new exception type ``tornado_aws.exceptions.RequestException`` (#5 from `nvllsvm <https://github.com/nvllsvm>_`)
