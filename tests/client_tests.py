@@ -125,6 +125,20 @@ class AsyncClientConfigTestCase(ClientConfigTestCase):
     CLIENT = client.AsyncAWSClient
 
 
+class ClientCloseTestCase(TestCase):
+
+    def test_close_is_called(self):
+        with self.client_with_default_creds('s3') as obj:
+            with mock.patch.object(obj._client, 'close') as close:
+                obj.close()
+                close.assert_called_once()
+
+
+class AsyncClientCloseTestCase(ClientCloseTestCase):
+
+    CLIENT = client.AsyncAWSClient
+
+
 class AMZErrorTestCase(TestCase):
 
     def test_awz_error(self):
