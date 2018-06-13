@@ -402,6 +402,24 @@ class ClientFetchTestCase(MockTestCase):
                 self.assertEqual(request.headers['Content-Type'],
                                  'application/x-amz-json-1.0')
 
+    def test_fetch_str_success(self):
+        with self.client_with_default_creds('s3') as obj:
+            with mock.patch.object(obj._client, 'fetch') as fetch:
+                fetch.return_value = self.mock_ok_response()
+                body = json.dumps({'foo': 'bar'})
+                result = obj.fetch(
+                    'POST', '/', body=body,
+                    headers={'x-amz-target': 'DynamoDB_20120810.CreateTable',
+                             'Content-Type': 'application/x-amz-json-1.0'})
+                self.assertEqual(result.code, 200)
+                fetch.assert_called_once()
+
+                # Get the first argument of the call into fetch
+                request = fetch.call_args_list[0][0][0]
+                self.assertEqual(request.method, 'POST')
+                self.assertEqual(request.headers['Content-Type'],
+                                 'application/x-amz-json-1.0')
+
     def test_fetch_os_error(self):
         with self.client_with_default_creds('s3') as obj:
             with mock.patch.object(obj._client, 'fetch') as fetch:

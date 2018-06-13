@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import socket
+import sys
 try:
     from urllib.parse import urlparse
 except ImportError:  # pragma: nocover
@@ -35,6 +36,8 @@ from tornado_aws import config, exceptions, txml
 LOGGER = logging.getLogger(__name__)
 
 MIME_AWZ_JSON = 'application/x-amz-json-1.1'
+
+PYTHON3 = True if sys.version_info > (3, 0, 0) else False
 
 _AWZ_CONTENT_TYPES = [
     'application/json',
@@ -383,7 +386,7 @@ class AWSClient(object):
         :rtype: dict
 
         """
-        if isinstance(body, str):
+        if PYTHON3 and isinstance(body, str):
             body = body.encode('utf-8')
 
         query_string = self._query_string(query_args)

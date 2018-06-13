@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.1.1 (2018-06-16)
+------------------
+- Don't convert str to bytes in Python 2 when making headers
+
 1.1.0 (2018-03-19)
 ------------------
  - Add ``close`` method to ``AWSClient`` (#9 from `31z4 <https://github.com/31z4>_`)
