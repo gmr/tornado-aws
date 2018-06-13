@@ -39,7 +39,7 @@ def read_requirements(name):
 
 setuptools.setup(
     name='tornado-aws',
-    version='1.1.0',
+    version='1.1.1',
     description=DESC,
     long_description=open('README.rst').read(),
     author='Gavin M. Roy',
