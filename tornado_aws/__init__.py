@@ -6,6 +6,6 @@ from tornado_aws.client import AWSClient
 from tornado_aws.client import AsyncAWSClient
 from tornado_aws.client import exceptions
 
-__version__ = '1.1.1'
+__version__ = '1.2.0'
 
 __all__ = ['AWSClient', 'AsyncAWSClient', 'exceptions']
