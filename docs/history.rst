@@ -3,6 +3,11 @@
 Version History
 ===============
 
+1.2.0 (2018-10-12)
+------------------
+- Add `force_instance` option when creating the client to disable instance isolation (#8)
+- Fix a bug where we assume amz-jz error responses will include a message
+
 1.1.1 (2018-06-16)
 ------------------
 - Don't convert str to bytes in Python 2 when making headers
