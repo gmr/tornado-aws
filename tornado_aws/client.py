@@ -206,7 +206,7 @@ class AWSClient(object):
                      awz_error['__type'] in _REFRESH_EXCEPTIONS),
                     exceptions.AWSError(
                         type=awz_error['__type'],
-                        message=awz_error['message']))
+                        message=awz_error.get('message', '(null)')))
         try:
             xml_error = self._parse_xml_error(error.response.body)
         except ValueError:
