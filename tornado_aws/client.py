@@ -532,6 +532,7 @@ class AsyncAWSClient(AWSClient):
     :param str endpoint: Override the base endpoint URL
     :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
     :param tornado.ioloop.IOLoop io_loop: Specify the IOLoop to use
+    :param bool force_instance: Keep an isolated instance of the HTTP client
     :raises: :exc:`tornado_aws.exceptions.ConfigNotFound`
     :raises: :exc:`tornado_aws.exceptions.ConfigParserError`
     :raises: :exc:`tornado_aws.exceptions.NoCredentialsError`
@@ -543,7 +544,8 @@ class AsyncAWSClient(AWSClient):
 
     def __init__(self, service, profile=None, region=None, access_key=None,
                  secret_key=None, endpoint=None, max_clients=100,
-                 use_curl=False, io_loop=None):
+                 use_curl=False, io_loop=None, force_instance=True):
+        self._force_instance = force_instance
         self._ioloop = io_loop or ioloop.IOLoop.current()
         self._max_clients = max_clients
         self._use_curl = use_curl
@@ -563,7 +565,7 @@ class AsyncAWSClient(AWSClient):
             return curl_httpclient.CurlAsyncHTTPClient(
                 self._ioloop, self._max_clients)
         return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
-                                          force_instance=True)
+                                          force_instance=self._force_instance)
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=None,
               recursed=False):
