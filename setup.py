@@ -44,7 +44,7 @@ setuptools.setup(
     long_description=open('README.rst').read(),
     author='Gavin M. Roy',
     author_email='gavinmroy@gmail.com',
-    url='http://tornado-aws.readthedocs.org',
+    url='https://tornado-aws.readthedocs.io',
     packages=['tornado_aws'],
     package_data={'': ['LICENSE', 'README.rst', 'requires/installation.txt']},
     include_package_data=True,
