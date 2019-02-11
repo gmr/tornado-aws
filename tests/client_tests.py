@@ -564,6 +564,8 @@ class AsyncClientFetchTestCase(MockTestCase, utils.AsyncHTTPTestCase):
             '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
             'key={}&secret_key={}&token={}'.format(
                 role, role, access_key, secret_key, token))
+        os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp/{}'.format(
+            access_key)
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             cfg = config.Authorization('default', client=cfg_client)
             with self.client_with_default_creds(
@@ -589,6 +591,8 @@ class AsyncClientFetchTestCase(MockTestCase, utils.AsyncHTTPTestCase):
             '/latest/meta-data/iam/security-credentials/{}?role={}&access_'
             'key={}&secret_key={}&token={}'.format(
                 role, role, access_key, secret_key, token))
+        os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp/{}'.format(
+            access_key)
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             cfg = config.Authorization('default', client=cfg_client)
             with self.client_with_default_creds(
