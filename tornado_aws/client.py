@@ -588,13 +588,13 @@ class AsyncAWSClient(AWSClient):
         :raises: :class:`~tornado_aws.exceptions.NoCredentialsError`
 
         """
-        future = concurrent.TracebackFuture()
+        future = concurrent.Future()
 
         def on_response(response):
-            exception = response.exception()
-            if exception:
-                if isinstance(exception, httpclient.HTTPError):
-                    need_credentials, aws_error = self._process_error(exception)
+            exc = response.exception()
+            if exc:
+                if isinstance(exc, httpclient.HTTPError):
+                    need_credentials, aws_error = self._process_error(exc)
                     if need_credentials and \
                             not self._auth_config.local_credentials:
                         self._auth_config.reset()
@@ -607,10 +607,11 @@ class AsyncAWSClient(AWSClient):
                                                  headers, body, True)
                             self._ioloop.add_future(request, on_retry)
                             return
-                    future.set_exception(aws_error if aws_error else exception)
+                    future.set_exception(aws_error if aws_error else exc)
                 else:
-                    LOGGER.error('Error making request: %s', exception)
-                    future.set_exception(exceptions.RequestException(error=exception))
+                    LOGGER.error('Error making request: %s', exc)
+                    future.set_exception(
+                        exceptions.RequestException(error=exc))
             else:
                 future.set_result(response.result())
 

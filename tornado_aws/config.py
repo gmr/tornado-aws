@@ -201,7 +201,7 @@ class Authorization(object):
 
         """
         LOGGER.debug('Refreshing EC2 IAM Credentials')
-        future = concurrent.TracebackFuture() if self._is_async else None
+        future = concurrent.Future() if self._is_async else None
         try:
             result = self._fetch_credentials()
             if concurrent.is_future(result):
@@ -225,7 +225,7 @@ class Authorization(object):
         except (httpclient.HTTPError,
                 OSError) as error:
             LOGGER.error('Error Fetching Credentials: %s', error)
-            raise exceptions.NoCredentialsError()
+            raise exceptions.NoCredentialsError
         return future
 
     def reset(self):
@@ -235,7 +235,7 @@ class Authorization(object):
 
         """
         if self.local_credentials:
-            raise exceptions.LocalCredentialsError()
+            raise exceptions.LocalCredentialsError
         self._access_key = None
         self._secret_key = None
         self._expiration = None
@@ -270,10 +270,10 @@ class Authorization(object):
         """Return the credentials from the EC2 Instance Metadata and user data
         API using an Async adapter.
 
-        :return: :class:`~concurrent.TracebackFuture`
+        :return: :class:`~concurrent.Future`
 
         """
-        future = concurrent.TracebackFuture()
+        future = concurrent.Future()
 
         def on_credentials(response):
             if not self._future_exception(response, future):
@@ -318,11 +318,11 @@ class Authorization(object):
 
         :param str role: The role to get temporary credentials for
 
-        :rtype: :class:`~tornado.concurrent.TracebackFuture`
+        :rtype: :class:`~tornado.concurrent.Future`
         :raises: tornado.httpclient.HTTPError
 
         """
-        future = concurrent.TracebackFuture()
+        future = concurrent.Future()
 
         def on_response(response):
             if not self._future_exception(response, future):
@@ -353,11 +353,11 @@ class Authorization(object):
     def _get_role_async(self):
         """Fetch the IAM role from the ECS Metadata and user data API
 
-        :rtype: :class:`~tornado.concurrent.TracebackFuture`
+        :rtype: :class:`~tornado.concurrent.Future`
         :raises: tornado.httpclient.HTTPError
 
         """
-        future = concurrent.TracebackFuture()
+        future = concurrent.Future()
 
         def on_response(response):
             if not self._future_exception(response, future):

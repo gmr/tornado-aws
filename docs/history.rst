@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.3.0 (2019-02-11)
+------------------
+- Add support for Python 3.7 and newer Tornado versions (5.0+)
+
 1.2.0 (2018-10-12)
 ------------------
 - Add `force_instance` option when creating the client to disable instance isolation (#8)
