@@ -562,10 +562,10 @@ class AsyncAWSClient(AWSClient):
 
         """
         if self._use_curl:
-            return curl_httpclient.CurlAsyncHTTPClient(
-                self._ioloop, self._max_clients)
-        return httpclient.AsyncHTTPClient(max_clients=self._max_clients,
-                                          force_instance=self._force_instance)
+            httpclient.AsyncHTTPClient.configure(
+                'tornado.curl_httpclient.CurlAsyncHTTPClient')
+        return httpclient.AsyncHTTPClient(
+            max_clients=self._max_clients, force_instance=self._force_instance)
 
     def fetch(self, method, path='/', query_args=None, headers=None, body=None,
               recursed=False):
