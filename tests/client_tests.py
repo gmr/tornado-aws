@@ -431,7 +431,7 @@ class ClientFetchTestCase(MockTestCase):
     def test_fetch_no_headers(self):
         with self.client_with_default_creds('s3') as obj:
             with mock.patch.object(obj._client, 'fetch') as fetch:
-                fetch.return_value=self.mock_ok_response()
+                fetch.return_value = self.mock_ok_response()
                 body = json.dumps({'foo': 'bar'})
                 result = obj.fetch('POST', '/', body=body)
                 self.assertEqual(result.code, 200)
