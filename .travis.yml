@@ -14,9 +14,12 @@ python:
 before_install:
   - docker run -d --name=dynalite -p 8000:8000 rajatvig/dynalite-alpine:latest
   - docker run -d --name=s3 -p 4567:4567 verespej/fake-s3:latest
+  - sudo apt-get update
+  - sudo apt-get install -y libgnutls-dev
 env:
   DYNAMODB_ENDPOINT: http://localhost:8000
   S3_ENDPOINT: http://localhost:4567
+  PYCURL_SSL_LIBRARY: gnutls
 install:
   - pip install -r requires/testing.txt
 script: nosetests

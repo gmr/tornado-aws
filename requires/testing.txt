@@ -5,6 +5,5 @@ futures
 mock
 nose
 pycurl
-pylint
 wheel
 -r installation.txt
