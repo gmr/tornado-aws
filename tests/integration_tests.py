@@ -150,7 +150,8 @@ class S3TestCase(testing.AsyncTestCase):
 
     def get(self, key):
         LOGGER.debug('Getting object from s3://%s/%s', self.bucket, key)
-        return self.client.fetch('GET', '/{}'.format(key), headers=self.headers)
+        return self.client.fetch(
+            'GET', '/{}'.format(key), headers=self.headers)
 
     @gen.coroutine
     def store(self, key, value):

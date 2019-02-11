@@ -5,7 +5,8 @@ Version History
 
 1.3.0 (2019-02-11)
 ------------------
-- Add support for Python 3.7 and newer Tornado versions (5.0+)
+- Add support for Python 3.7
+- Drop support for versions of tornado < 5.0
 
 1.2.0 (2018-10-12)
 ------------------
