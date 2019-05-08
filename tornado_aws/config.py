@@ -90,7 +90,7 @@ def _parse_file(file_path):
 
     """
     file_path = path.abspath(path.expanduser(path.expandvars(file_path)))
-    LOGGER.debug('Reading file: %s', file_path)
+    LOGGER.debug('Attempting to load credentials from %s', file_path)
     if not path.exists(file_path):
         raise exceptions.ConfigNotFound(path=file_path)
 
@@ -138,11 +138,13 @@ class Authorization(object):
         """
         self._client = client
         self._profile = profile
+        self._config_credentials = False
         self._access_key, self._secret_key = self._resolve_credentials(
             access_key, secret_key)
+        self._local_credentials = bool(self._access_key) and \
+            not self._config_credentials
         self._security_token = None
         self._expiration = None
-        self._local_credentials = bool(self._access_key)
         self._is_async = _is_async_client(client)
         self._ioloop = ioloop.IOLoop.current() if self._is_async else None
 
@@ -200,8 +202,16 @@ class Authorization(object):
         :raises: tornado_aws.exceptions.NoCredentialsError
 
         """
-        LOGGER.debug('Refreshing EC2 IAM Credentials')
         future = concurrent.Future() if self._is_async else None
+
+        # Refresh config file credentials
+        if self._config_credentials:
+            self._access_key, self._secret_key = \
+                self._resolve_config_file_credentials()
+            future.set_result(True)
+            return future
+
+        LOGGER.debug('Refreshing EC2 IAM Credentials')
         try:
             result = self._fetch_credentials()
             if concurrent.is_future(result):
@@ -378,18 +388,29 @@ class Authorization(object):
 
         :return: access_key, secret_key
         :rtype: str, str
-        :raises: ConfigNotFound
-        :raises: ConfigParserError
 
         """
         access_key = os.getenv('AWS_ACCESS_KEY_ID', access_key)
         secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', secret_key)
         if access_key and secret_key:
             return access_key, secret_key
+        return self._resolve_config_file_credentials()
 
+    def _resolve_config_file_credentials(self):
+        """Attempt to load credentials via configuration file, looking to
+        the AWS_SHARED_CREDENTIALS_FILE environment variable for the path
+        or defaulting to `'~/.aws/credentials`. This allows for instances
+        where the credentials file is mounted or managed by an external
+        system and can change while the application is running.
+
+        :raises: ConfigNotFound
+        :raises: ConfigParserError
+        :return: access_key, secret_key
+        :rtype: str, str
+
+        """
         file_path = os.getenv('AWS_SHARED_CREDENTIALS_FILE',
                               DEFAULT_CREDENTIALS_PATH)
-
         try:
             config = _parse_file(file_path)
         except exceptions.ConfigNotFound:
@@ -405,4 +426,5 @@ class Authorization(object):
                           config.get('default', {}).get(key))
         if not all(values):
             return None, None
+        self._config_credentials = True
         return values[0], values[1]
