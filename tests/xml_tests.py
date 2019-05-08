@@ -30,4 +30,3 @@ class TestCase(unittest.TestCase):
     def test_invalid_xml(self):
         with self.assertRaises(ValueError):
             txml.loads('foo')
-

@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.4.0 (2019-05-08)
+------------------
+- Add support for credentials files when refreshing credentials
+
 1.3.0 (2019-02-11)
 ------------------
 - Add support for Python 3.7

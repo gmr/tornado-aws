@@ -1,4 +1,5 @@
 from os import path
+
 import setuptools
 
 CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
@@ -39,7 +40,7 @@ def read_requirements(name):
 
 setuptools.setup(
     name='tornado-aws',
-    version='1.3.0',
+    version='1.4.0',
     description=DESC,
     long_description=open('README.rst').read(),
     author='Gavin M. Roy',

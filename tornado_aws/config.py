@@ -8,12 +8,11 @@ except ImportError:  # pragma: no cover
     import ConfigParser as configparser
 import json
 import logging
-from os import path
 import os
+from os import path
 import socket
 
 from tornado import concurrent, httpclient, ioloop
-
 try:
     from tornado import curl_httpclient
 except ImportError:  # pragma: no cover
@@ -62,9 +61,9 @@ def get_region(profile):
     key = 'profile {0}'.format(profile)
     if key not in config and 'default' not in config:
         raise exceptions.NoProfileError(path=file_path, profile=profile)
-    return (config.get(key, {}).get('region') or
-            config.get('default', {}).get('region') or
-            DEFAULT_REGION)
+    return config.get(
+        key, {}).get('region') or config.get(
+            'default', {}).get('region') or DEFAULT_REGION
 
 
 def _is_async_client(client):

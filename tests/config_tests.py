@@ -6,11 +6,9 @@ import unittest
 import uuid
 
 import mock
-
 from tornado import concurrent, httpclient, testing
 
 from tornado_aws import config, exceptions
-
 from . import utils
 
 LOGGER = logging.getLogger(__name__)
@@ -76,7 +74,7 @@ class GetRegionTestCase(unittest.TestCase):
     def test_raises_for_missing_file(self):
         os.environ['AWS_CONFIG_FILE'] = uuid.uuid4().hex
         with mock.patch(
-            'tornado_aws.config._request_region_from_instance') as region:
+                'tornado_aws.config._request_region_from_instance') as region:
             region.side_effect = OSError
             with self.assertRaises(exceptions.ConfigNotFound):
                 config.get_region('default')
@@ -143,7 +141,8 @@ class GetRoleTestCase(utils.AsyncHTTPTestCase):
     @concurrent.run_on_executor
     def make_request(self, expectation):
         url = self.get_url(
-            '/latest/meta-data/iam/security-credentials/?role=%s' % expectation)
+            '/latest/meta-data/iam/security-credentials/?role=%s' %
+            expectation)
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             obj = config.Authorization('default',
                                        client=httpclient.HTTPClient())
@@ -159,7 +158,8 @@ class GetRoleTestCase(utils.AsyncHTTPTestCase):
     def test_async_request(self):
         expectation = str(uuid.uuid4().hex)
         url = self.get_url(
-            '/latest/meta-data/iam/security-credentials/?role=%s' % expectation)
+            '/latest/meta-data/iam/security-credentials/?role=%s' %
+            expectation)
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             obj = config.Authorization('default',
                                        client=httpclient.AsyncHTTPClient())
@@ -327,7 +327,7 @@ class FetchCredentialsTestCase(utils.AsyncHTTPTestCase):
         with mock.patch('tornado_aws.config.INSTANCE_ENDPOINT', url):
             obj = config.Authorization('default', client=client)
             with mock.patch.object(
-                obj, '_get_instance_credentials_async') as get_creds:
+                    obj, '_get_instance_credentials_async') as get_creds:
                 future = concurrent.Future()
                 future.set_exception(httpclient.HTTPError(599))
                 get_creds.return_value = future

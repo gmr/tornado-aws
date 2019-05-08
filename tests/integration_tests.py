@@ -6,20 +6,18 @@ import unittest
 import uuid
 
 from tornado import gen, httpclient, testing
-
 try:
     from tornado import curl_httpclient
 except ImportError:
     curl_httpclient = None
 
 import tornado_aws
-
 from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
 CREATE_BUCKET_BODY = """\
-<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<CreateBucketConfiguration xmlns='http://s3.amazonaws.com/doc/2006-03-01/'>
   <LocationConstraint>test</LocationConstraint>
 </CreateBucketConfiguration>
 """
@@ -31,52 +29,52 @@ S3_ENDPOINT = os.environ['S3_ENDPOINT']
 class DynamoDBTestCase(testing.AsyncTestCase):
 
     TABLE_DEFINITION = {
-        "AttributeDefinitions": [
+        'AttributeDefinitions': [
             {
-                "AttributeName": "ForumName",
-                "AttributeType": "S"
+                'AttributeName': 'ForumName',
+                'AttributeType': 'S'
             },
             {
-                "AttributeName": "Subject",
-                "AttributeType": "S"
+                'AttributeName': 'Subject',
+                'AttributeType': 'S'
             },
             {
-                "AttributeName": "LastPostDateTime",
-                "AttributeType": "S"
+                'AttributeName': 'LastPostDateTime',
+                'AttributeType': 'S'
             }
         ],
-        "TableName": "Thread",
-        "KeySchema": [
+        'TableName': 'Thread',
+        'KeySchema': [
             {
-                "AttributeName": "ForumName",
-                "KeyType": "HASH"
+                'AttributeName': 'ForumName',
+                'KeyType': 'HASH'
             },
             {
-                "AttributeName": "Subject",
-                "KeyType": "RANGE"
+                'AttributeName': 'Subject',
+                'KeyType': 'RANGE'
             }
         ],
-        "LocalSecondaryIndexes": [
+        'LocalSecondaryIndexes': [
             {
-                "IndexName": "LastPostIndex",
-                "KeySchema": [
+                'IndexName': 'LastPostIndex',
+                'KeySchema': [
                     {
-                        "AttributeName": "ForumName",
-                        "KeyType": "HASH"
+                        'AttributeName': 'ForumName',
+                        'KeyType': 'HASH'
                     },
                     {
-                        "AttributeName": "LastPostDateTime",
-                        "KeyType": "RANGE"
+                        'AttributeName': 'LastPostDateTime',
+                        'KeyType': 'RANGE'
                     }
                 ],
-                "Projection": {
-                    "ProjectionType": "KEYS_ONLY"
+                'Projection': {
+                    'ProjectionType': 'KEYS_ONLY'
                 }
             }
         ],
-        "ProvisionedThroughput": {
-            "ReadCapacityUnits": 5,
-            "WriteCapacityUnits": 5
+        'ProvisionedThroughput': {
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
         }
     }
 

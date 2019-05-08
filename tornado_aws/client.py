@@ -464,7 +464,7 @@ class AWSClient(object):
         :rtype: str, str
 
         """
-        tmp = dict([(key.lower(), value) for key, value in headers.items()])
+        tmp = {key.lower(): value for key, value in headers.items()}
         signed_headers = ';'.join([k.lower() for k in sorted(tmp.keys())])
         headers_string = '\n'.join(['{0}:{1}'.format(k, tmp[k])
                                     for k in sorted(tmp.keys())]) + '\n'

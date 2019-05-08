@@ -2,12 +2,14 @@ import json
 import logging
 import pprint
 
-import tornado_aws
 from tornado import gen, ioloop
+
+import tornado_aws
 
 HEADERS = {'Content-Type': 'application/x-amz-json-1.0',
            'x-amz-target': 'DynamoDB_20120810.DescribeTable'}
 PAYLOAD = {'TableName': 'prod-us-east-1-history'}
+
 
 @gen.coroutine
 def async_request():
@@ -17,6 +19,7 @@ def async_request():
     x = json.loads(response.body.decode('utf-8'))
     pprint.pprint(x)
     ioloop.IOLoop.instance().stop()
+
 
 logging.basicConfig(level=logging.DEBUG)
 _ioloop = ioloop.IOLoop.instance()
