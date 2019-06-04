@@ -92,7 +92,8 @@ class DynamoDBTestCase(testing.AsyncTestCase):
         definition = copy.deepcopy(self.TABLE_DEFINITION)
         definition['TableName'] = str(uuid.uuid4())
         result = yield self.client.fetch(
-            'POST', '/', body=json.dumps(definition).encode('utf-8'),
+            'POST', '/',
+            body=json.dumps(definition).encode('utf-8'),
             headers={
                 'x-amz-target': 'DynamoDB_20120810.CreateTable',
                 'Content-Type': 'application/x-amz-json-1.0'})

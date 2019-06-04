@@ -101,6 +101,9 @@ class AWSClient(object):
     set in ``AWS_ACCESS_KEY_ID`` will only be used if there is an accompanying
     value in ``AWS_SECRET_ACCESS_KEY`` environment variable.
 
+    If ``AWS_SECURITY_TOKEN`` or ``AWS_SESSION_TOKEN`` are set, they will be
+    automatically be used as well.
+
     Like the access key, the secret key can be set when creating a new client
     instance. The configuration logic matches the access key with the exception
     of the environment variable. The secret key can set in the
@@ -115,10 +118,11 @@ class AWSClient(object):
     a URL using the service and region variables.
 
     :param str service: The service for the API calls
-    :param str profile: Specify the configuration profile name
-    :param str region: The AWS region to make requests to
-    :param str access_key: The access key
-    :param str secret_key: The secret access key
+    :param str profile: Optionally specify the configuration profile name
+    :param str region: An optional AWS region to make requests to
+    :param str access_key: An optional access key
+    :param str secret_key: An optional secret access key
+    :param str security_token: An optional security token
     :param str endpoint: Override the base endpoint URL
     :raises: :exc:`tornado_aws.exceptions.ConfigNotFound`
     :raises: :exc:`tornado_aws.exceptions.ConfigParserError`
@@ -132,14 +136,14 @@ class AWSClient(object):
     REQUEST_TIMEOUT = 30
     SCHEME = 'https'
 
-    def __init__(self, service, profile=None, region=None,
-                 access_key=None, secret_key=None, endpoint=None):
+    def __init__(self, service, profile=None, region=None, access_key=None,
+                 secret_key=None, security_token=None, endpoint=None):
         self._client = self._get_client_adapter()
         self._service = service
         self._profile = profile or os.getenv('AWS_DEFAULT_PROFILE', 'default')
         self._region = region or config.get_region(self._profile)
-        self._auth_config = config.Authorization(self._profile, access_key,
-                                                 secret_key, self._client)
+        self._auth_config = config.Authorization(
+            self._profile, access_key, secret_key,security_token, self._client)
         self._endpoint_url = self._endpoint(endpoint)
         self._host = self._hostname(self._endpoint_url)
 
@@ -307,18 +311,17 @@ class AWSClient(object):
         :param dict query_args: Request query arguments
         :param dict headers: Request headers
         :param bytes body: The request body
-        :rtype: tornado.httpclient.HTTPClient
+        :rtype: tornado.httpclient.HTTPRequest
 
         """
         if headers is None:
             headers = {}
         signed_headers, signed_url = self._signed_request(
             method, path, query_args or {}, dict(headers), body or b'')
-        LOGGER.debug('Signed URL: %s', signed_url)
-        return httpclient.HTTPRequest(signed_url, method,
-                                      signed_headers, body,
-                                      connect_timeout=self.CONNECT_TIMEOUT,
-                                      request_timeout=self.REQUEST_TIMEOUT)
+        return httpclient.HTTPRequest(
+            signed_url, method, signed_headers, body,
+            connect_timeout=self.CONNECT_TIMEOUT,
+            request_timeout=self.REQUEST_TIMEOUT)
 
     def _endpoint(self, endpoint):
         """Return the user specified endpoint or dynamically create the
@@ -329,9 +332,8 @@ class AWSClient(object):
         """
         if endpoint:
             return endpoint
-        return '{}://{}.{}.amazonaws.com'.format(self.SCHEME,
-                                                 self._service,
-                                                 self._region)
+        return '{}://{}.{}.amazonaws.com'.format(
+            self.SCHEME, self._service, self._region)
 
     def _get_client_adapter(self):
         """Return a HTTP client
@@ -512,6 +514,9 @@ class AsyncAWSClient(AWSClient):
     set in ``AWS_ACCESS_KEY_ID`` will only be used if there is an accompanying
     value in ``AWS_SECRET_ACCESS_KEY`` environment variable.
 
+    If ``AWS_SECURITY_TOKEN`` or ``AWS_SESSION_TOKEN`` are set, they will be
+    automatically be used as well.
+
     Like the access key, the secret key can be set when creating a new client
     instance. The configuration logic matches the access key with the exception
     of the environment variable. The secret key can set in the
@@ -529,6 +534,7 @@ class AsyncAWSClient(AWSClient):
     :param str region: The AWS region to make requests to
     :param str access_key: The access key
     :param str secret_key: The secret access key
+    :param str security_token: An optional security token
     :param str endpoint: Override the base endpoint URL
     :param int max_clients: Max simultaneous HTTP requests (Default: ``100``)
     :param tornado.ioloop.IOLoop io_loop: Specify the IOLoop to use
@@ -543,8 +549,9 @@ class AsyncAWSClient(AWSClient):
     ASYNC = True
 
     def __init__(self, service, profile=None, region=None, access_key=None,
-                 secret_key=None, endpoint=None, max_clients=100,
-                 use_curl=False, io_loop=None, force_instance=True):
+                 secret_key=None, security_token=None, endpoint=None,
+                 max_clients=100, use_curl=False, io_loop=None,
+                 force_instance=True):
         self._force_instance = force_instance
         self._ioloop = io_loop or ioloop.IOLoop.current()
         self._max_clients = max_clients
@@ -553,7 +560,8 @@ class AsyncAWSClient(AWSClient):
             raise exceptions.CurlNotInstalledError
 
         super(AsyncAWSClient, self).__init__(
-            service, profile, region, access_key, secret_key, endpoint)
+            service, profile, region, access_key, secret_key,
+            security_token, endpoint)
 
     def _get_client_adapter(self):
         """Return an asynchronous HTTP client adapter
@@ -616,10 +624,11 @@ class AsyncAWSClient(AWSClient):
                 future.set_result(response.result())
 
         def perform_request():
-            request = self._create_request(method, path, query_args, headers,
-                                           body)
-            api_future = self._client.fetch(request, raise_error=True)
-            self._ioloop.add_future(api_future, on_response)
+            self._ioloop.add_future(
+                self._client.fetch(
+                    self._create_request(
+                        method, path, query_args, headers, body),
+                    raise_error=True), on_response)
 
         def on_refreshed(response):
             if not self._future_exception(response, future):

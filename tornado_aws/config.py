@@ -124,12 +124,14 @@ def _request_region_from_instance():
 class Authorization(object):
     """Object used to hold configuration information."""
 
-    def __init__(self, profile, access_key=None, secret_key=None, client=None):
+    def __init__(self, profile, access_key=None, secret_key=None,
+                 security_token=None, client=None):
         """Create a new instance of the ``_AuthConfig`` class.
 
         :param str profile: The configuration profile to use
         :param str access_key: Optional configured access key
         :param str secret_key: Optional configured secret key
+        :param str security_token: Optional configured security token
         :param client: The HTTP client to use for EC2 API
         :type client: tornado.httpclient.HTTPClient or
             tornado.httpclient.AsyncHTTPClient
@@ -137,13 +139,12 @@ class Authorization(object):
         """
         self._client = client
         self._profile = profile
-        self._config_credentials = False
-        self._access_key, self._secret_key = self._resolve_credentials(
-            access_key, secret_key)
-        self._local_credentials = bool(self._access_key) and \
-            not self._config_credentials
+        self._local_credentials = False
+        self._access_key = None
+        self._secret_key = None
         self._security_token = None
         self._expiration = None
+        self._resolve_credentials(access_key, secret_key, security_token)
         self._is_async = _is_async_client(client)
         self._ioloop = ioloop.IOLoop.current() if self._is_async else None
 
@@ -204,10 +205,8 @@ class Authorization(object):
         future = concurrent.Future() if self._is_async else None
 
         # Refresh config file credentials
-        if self._config_credentials:
-            self._access_key, self._secret_key = \
-                self._resolve_config_file_credentials()
-            future.set_result(True)
+        if self._local_credentials:
+            future.set_result(self._resolve_credentials())
             return future
 
         LOGGER.debug('Refreshing EC2 IAM Credentials')
@@ -305,6 +304,18 @@ class Authorization(object):
             outer.set_exception(exception)
         return bool(exception)
 
+    def _get_config_value(self, config, key):
+        """Return the config value for the key, if it exists, checking both
+        the current profile and the default profile.
+
+        :param dict config: The config to use
+        :param str key: The key to get the value for
+        :rtype: str
+
+        """
+        return config[self._profile].get(
+            key, config.get('default', {}).get(key))
+
     def _get_instance_credentials(self, role):
         """Attempt to get temporary credentials for the specified role from the
         EC2 Instance Metadata and user data API
@@ -380,19 +391,28 @@ class Authorization(object):
         self._ioloop.add_future(request, on_response)
         return future
 
-    def _resolve_credentials(self, access_key, secret_key):
+    def _resolve_credentials(self, access_key=None, secret_key=None,
+                             security_token=None):
         """Try and load the credentials file from disk checking first to see
         if a path is specified in the ``AWS_SHARED_CREDENTIALS_FILE``
         environment variable and if not, falling back to ``~/.aws/credentials``
 
-        :return: access_key, secret_key
+        :param str access_key: An optional access key value
+        :param str secret_key: An optional security key value
+        :param str security_token: An optional security token value
+        :return: access_key, secret_key, security_token
         :rtype: str, str
 
         """
-        access_key = os.getenv('AWS_ACCESS_KEY_ID', access_key)
-        secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', secret_key)
-        if access_key and secret_key:
-            return access_key, secret_key
+        self._local_credentials = False
+        self._access_key = os.getenv('AWS_ACCESS_KEY_ID', access_key)
+        self._secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', secret_key)
+        self._security_token = os.getenv(
+            'AWS_SECURITY_TOKEN', os.getenv(
+                'AWS_SESSION_TOKEN', security_token))
+        if self._access_key and self._secret_key:
+            self._local_credentials = True
+            return True
         return self._resolve_config_file_credentials()
 
     def _resolve_config_file_credentials(self):
@@ -404,26 +424,28 @@ class Authorization(object):
 
         :raises: ConfigNotFound
         :raises: ConfigParserError
-        :return: access_key, secret_key
-        :rtype: str, str
+        :return: access_key, secret_key, security_token
+        :rtype: str, str, str
 
         """
-        file_path = os.getenv('AWS_SHARED_CREDENTIALS_FILE',
-                              DEFAULT_CREDENTIALS_PATH)
+        file_path = os.getenv(
+            'AWS_SHARED_CREDENTIALS_FILE', DEFAULT_CREDENTIALS_PATH)
         try:
             config = _parse_file(file_path)
         except exceptions.ConfigNotFound:
-            return None, None
+            return False
 
         if self._profile not in config:
-            raise exceptions.NoProfileError(path=file_path,
-                                            profile=self._profile)
+            raise exceptions.NoProfileError(
+                path=file_path, profile=self._profile)
 
-        values = []
-        for key in ['aws_access_key_id', 'aws_secret_access_key']:
-            values.append(config[self._profile].get(key) or
-                          config.get('default', {}).get(key))
-        if not all(values):
-            return None, None
-        self._config_credentials = True
-        return values[0], values[1]
+        self._access_key = self._get_config_value(config, 'aws_access_key_id')
+        self._secret_key = self._get_config_value(
+            config, 'aws_secret_access_key')
+        self._security_token = self._get_config_value(
+            config, 'aws_security_token') or self._get_config_value(
+                config, 'aws_session_token')
+        self._expiration = self._get_config_value(config, 'aws_access_key_id')
+        self._local_credentials = \
+            self._access_key is not None and self._secret_key is not None
+        return self._local_credentials
