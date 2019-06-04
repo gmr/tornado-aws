@@ -3,6 +3,11 @@
 Version History
 ===============
 
+1.5.0 (2019-06-04)
+------------------
+- Add support for ``aws_security_token``/``aws_ssion_token``/``expiration`` in configuration files
+- Add support for ``AWS_SECURITY_TOKEN``/``AWS_SESSION_TOKEN`` environment variable config
+
 1.4.0 (2019-05-08)
 ------------------
 - Add support for credentials files when refreshing credentials
@@ -14,7 +19,7 @@ Version History
 
 1.2.0 (2018-10-12)
 ------------------
-- Add `force_instance` option when creating the client to disable instance isolation (#8)
+- Add ``force_instance`` option when creating the client to disable instance isolation (#8)
 - Fix a bug where we assume amz-jz error responses will include a message
 
 1.1.1 (2018-06-16)
