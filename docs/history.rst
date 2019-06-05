@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.5.1 (2019-06-05)
+------------------
+- Fix refreshing of local credentials on failure, streamline logic
+
 1.5.0 (2019-06-04)
 ------------------
 - Add support for ``aws_security_token``/``aws_ssion_token``/``expiration`` in configuration files

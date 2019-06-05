@@ -599,27 +599,25 @@ class AsyncAWSClient(AWSClient):
         future = concurrent.Future()
 
         def on_response(response):
-            exc = response.exception()
+            aws_error, exc = None, response.exception()
             if exc:
                 if isinstance(exc, httpclient.HTTPError):
                     need_credentials, aws_error = self._process_error(exc)
-                    if need_credentials and \
-                            not self._auth_config.local_credentials:
+                    if need_credentials and not recursed:
                         self._auth_config.reset()
-                        if not recursed:
-                            def on_retry(retry):
-                                if not self._future_exception(retry, future):
-                                    future.set_result(retry.result())
 
-                            request = self.fetch(method, path, query_args,
-                                                 headers, body, True)
-                            self._ioloop.add_future(request, on_retry)
-                            return
-                    future.set_exception(aws_error if aws_error else exc)
-                else:
-                    LOGGER.error('Error making request: %s', exc)
-                    future.set_exception(
-                        exceptions.RequestException(error=exc))
+                        def on_retry(retry):
+                            if not self._future_exception(retry, future):
+                                future.set_result(retry.result())
+
+                        request = self.fetch(method, path, query_args,
+                                             headers, body, True)
+                        self._ioloop.add_future(request, on_retry)
+                        return
+                    LOGGER.error('Error making request: %s', aws_error or exc)
+                future.set_exception(
+                    aws_error if aws_error else
+                    exceptions.RequestException(error=exc))
             else:
                 future.set_result(response.result())
 

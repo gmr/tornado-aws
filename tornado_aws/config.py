@@ -186,14 +186,12 @@ class Authorization(object):
         return self._security_token
 
     def needs_credentials(self):
-        """Returns True if the client needs to fetch remote credentials.
+        """Returns True if the client needs fetch/refresh credentials
 
         :rtype: bool
 
         """
-        if self._local_credentials:
-            return False
-        return not self._access_key
+        return not self._access_key or not self._secret_key
 
     def refresh(self):
         """Load dynamic credentials from the AWS Instance Metadata and user
@@ -242,8 +240,6 @@ class Authorization(object):
         :raises: tornado_aws.exceptions.LocalCredentialsError()
 
         """
-        if self.local_credentials:
-            raise exceptions.LocalCredentialsError
         self._access_key = None
         self._secret_key = None
         self._expiration = None
