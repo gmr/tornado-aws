@@ -143,7 +143,8 @@ class AWSClient(object):
         self._profile = profile or os.getenv('AWS_DEFAULT_PROFILE', 'default')
         self._region = region or config.get_region(self._profile)
         self._auth_config = config.Authorization(
-            self._profile, access_key, secret_key,security_token, self._client)
+            self._profile, access_key, secret_key,
+            security_token, self._client)
         self._endpoint_url = self._endpoint(endpoint)
         self._host = self._hostname(self._endpoint_url)
 

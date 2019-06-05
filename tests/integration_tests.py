@@ -22,9 +22,6 @@ CREATE_BUCKET_BODY = """\
 </CreateBucketConfiguration>
 """
 
-DYNAMODB_ENDPOINT = os.environ['DYNAMODB_ENDPOINT']
-S3_ENDPOINT = os.environ['S3_ENDPOINT']
-
 
 class DynamoDBTestCase(testing.AsyncTestCase):
 
@@ -85,7 +82,7 @@ class DynamoDBTestCase(testing.AsyncTestCase):
         os.environ['AWS_SECRET_ACCESS_KEY'] = str(uuid.uuid4())
         os.environ['AWS_DEFAULT_REGION'] = 'local'
         self.client = tornado_aws.AsyncAWSClient(
-            'dynamodb', endpoint=DYNAMODB_ENDPOINT)
+            'dynamodb', endpoint=os.environ['DYNAMODB_ENDPOINT'])
 
     @testing.gen_test
     def test_create_table(self):
@@ -113,7 +110,8 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
         os.environ['AWS_SECRET_ACCESS_KEY'] = str(uuid.uuid4())
         os.environ['AWS_DEFAULT_REGION'] = 'local'
         self.client = tornado_aws.AsyncAWSClient(
-            'dynamodb', endpoint=DYNAMODB_ENDPOINT, use_curl=True)
+            'dynamodb', endpoint=os.environ['DYNAMODB_ENDPOINT'],
+            use_curl=True)
 
     @unittest.skipIf(curl_httpclient is None, 'pycurl not installed')
     def test_create_table(self):
@@ -143,7 +141,7 @@ class S3TestCase(testing.AsyncTestCase):
         os.environ['AWS_SECRET_ACCESS_KEY'] = str(uuid.uuid4())
         os.environ['AWS_DEFAULT_REGION'] = 'local'
         self.client = tornado_aws.AsyncAWSClient(
-            's3', endpoint=S3_ENDPOINT)
+            's3', endpoint=os.environ['S3_ENDPOINT'])
         self.bucket = uuid.uuid4().hex
         self.headers = {'Host': '{}.s3.amazonaws.com'.format(self.bucket)}
 

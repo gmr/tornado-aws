@@ -103,12 +103,6 @@ class CredentialsManagementTestCase(unittest.TestCase):
         self.assertIsNone(obj._expiration)
         self.assertIsNone(obj.security_token)
 
-    def test_reset_raises_for_local_credentials(self):
-        obj = config.Authorization('default', client=httpclient.HTTPClient())
-        obj._local_credentials = True
-        with self.assertRaises(exceptions.LocalCredentialsError):
-            obj.reset()
-
 
 class ResolvCredentialsTestCase(unittest.TestCase):
     def test_error_case(self):
