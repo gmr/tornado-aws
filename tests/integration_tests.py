@@ -5,13 +5,14 @@ import os
 import unittest
 import uuid
 
-from tornado import gen, httpclient, testing
+from tornado import gen, testing
 try:
     from tornado import curl_httpclient
 except ImportError:
     curl_httpclient = None
 
 import tornado_aws
+from tornado_aws import exceptions
 from . import utils
 
 LOGGER = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ class UseCurlDynamoDBTestCase(DynamoDBTestCase):
             'dynamodb', endpoint='http://localhost', use_curl=True)
         definition = copy.deepcopy(self.TABLE_DEFINITION)
         definition['TableName'] = str(uuid.uuid4())
-        with self.assertRaises(httpclient.HTTPError):
+        with self.assertRaises(exceptions.RequestException):
             yield client.fetch(
                 'POST', '/', body=json.dumps(definition).encode('utf-8'),
                 headers={
