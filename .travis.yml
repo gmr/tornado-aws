@@ -4,18 +4,16 @@ services:
   - docker
 language: python
 python:
-  - 2.7
-  - 3.5
-  - 3.6
-  - 3.7
+  - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y libgnutls-dev
   - ./bootstrap
 env:
-  DYNAMODB_ENDPOINT: http://localhost:8000
-  S3_ENDPOINT: http://localhost:4567
-  PYCURL_SSL_LIBRARY: gnutls
+  - PYCURL_SSL_LIBRARY=gnutls
 install:
   - pip install -r requires/testing.txt
 script: nosetests
