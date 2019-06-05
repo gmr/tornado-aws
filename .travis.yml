@@ -9,10 +9,9 @@ python:
   - 3.6
   - 3.7
 before_install:
-  - docker run -d --name=dynalite -p 8000:8000 rajatvig/dynalite-alpine:latest
-  - docker run -d --name=s3 -p 4567:4567 verespej/fake-s3:latest
   - sudo apt-get update
   - sudo apt-get install -y libgnutls-dev
+  - ./bootstrap
 env:
   DYNAMODB_ENDPOINT: http://localhost:8000
   S3_ENDPOINT: http://localhost:4567
@@ -36,5 +35,4 @@ cache:
   directories:
     - $HOME/.pip-cache/
 after_script:
-  - docker stop dynalite s3
-  - docker rm dynalite s3
+  - docker-compose down
