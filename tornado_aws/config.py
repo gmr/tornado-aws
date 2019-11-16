@@ -146,6 +146,7 @@ class Authorization(object):
         self._expiration = None
         self._resolve_credentials(access_key, secret_key, security_token)
         self._is_async = _is_async_client(client)
+        LOGGER.info('Authorization for async client: %s', self._is_async)
         self._ioloop = ioloop.IOLoop.current() if self._is_async else None
 
     @property
