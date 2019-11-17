@@ -6,7 +6,7 @@ Parse XML return content and return it as a dict.
 
 """
 import collections
-import xml.etree.ElementTree as ET
+from xml.etree import ElementTree
 
 
 def loads(content):
@@ -18,8 +18,8 @@ def loads(content):
 
     """
     try:
-        return _xml_to_dict(ET.XML(content))
-    except ET.ParseError as error:
+        return _xml_to_dict(ElementTree.XML(content))
+    except ElementTree.ParseError as error:
         raise ValueError(str(error))
 
 

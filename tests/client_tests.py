@@ -5,9 +5,9 @@ import logging
 import os
 import tempfile
 import unittest
+from unittest import mock
 import uuid
 
-import mock
 from tornado import concurrent, httpclient, httputil, testing
 
 from tornado_aws import client, config, exceptions

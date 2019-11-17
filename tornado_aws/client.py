@@ -12,20 +12,9 @@ import json
 import logging
 import os
 import socket
-import sys
-try:
-    from urllib.parse import urlparse
-except ImportError:  # pragma: nocover
-    from urlparse import urlparse
-
-try:
-    from urllib.parse import quote
-except ImportError:  # pragma: nocover
-    from urllib import quote
-
+from urllib import parse
 
 from tornado import concurrent, httpclient, ioloop
-
 try:
     from tornado import curl_httpclient
 except ImportError:  # pragma: nocover
@@ -36,8 +25,6 @@ from tornado_aws import config, exceptions, txml
 LOGGER = logging.getLogger(__name__)
 
 MIME_AWZ_JSON = 'application/x-amz-json-1.1'
-
-PYTHON3 = True if sys.version_info > (3, 0, 0) else False
 
 _AWZ_CONTENT_TYPES = [
     'application/json',
@@ -353,7 +340,7 @@ class AWSClient(object):
         :return: str
 
         """
-        return urlparse(url).netloc
+        return parse.urlparse(url).netloc
 
     @staticmethod
     def _quote(value):
@@ -364,7 +351,7 @@ class AWSClient(object):
         :rtype: str
 
         """
-        return quote(value, safe='').replace('%7E', '~')
+        return parse.quote(value, safe='').replace('%7E', '~')
 
     @staticmethod
     def _sign(key, msg):
@@ -389,7 +376,7 @@ class AWSClient(object):
         :rtype: dict
 
         """
-        if PYTHON3 and isinstance(body, str):
+        if isinstance(body, str):
             body = body.encode('utf-8')
 
         query_string = self._query_string(query_args)

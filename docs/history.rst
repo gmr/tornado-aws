@@ -3,8 +3,9 @@
 Version History
 ===============
 
-1.6.0 (2019-11-17)
+2.0.0 (2019-11-17)
 ------------------
+- Drop support for Python 2
 - Switch to http.client from tornado.httpclient.HTTPClient when querying the AWS region
 
 1.5.1 (2019-06-05)

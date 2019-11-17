@@ -6,8 +6,6 @@ CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
                'Intended Audience :: Developers',
                'License :: OSI Approved :: BSD License',
                'Operating System :: OS Independent',
-               'Programming Language :: Python :: 2',
-               'Programming Language :: Python :: 2.7',
                'Programming Language :: Python :: 3',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: 3.6',
@@ -41,7 +39,7 @@ def read_requirements(name):
 
 setuptools.setup(
     name='tornado-aws',
-    version='1.6.0',
+    version='2.0.0',
     description=DESC,
     long_description=open('README.rst').read(),
     author='Gavin M. Roy',

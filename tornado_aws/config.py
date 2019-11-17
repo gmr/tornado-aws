@@ -2,10 +2,7 @@
 AWS Credentials Loader
 
 """
-try:
-    import configparser
-except ImportError:  # pragma: no cover
-    import ConfigParser as configparser
+import configparser
 import http.client
 import json
 import logging

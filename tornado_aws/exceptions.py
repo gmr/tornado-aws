@@ -15,8 +15,8 @@ class AWSClientException(Exception):
     fmt = 'An error occurred'
 
     def __init__(self, **kwargs):
-        super(AWSClientException, self).__init__(self.fmt.format(**kwargs),
-                                                 kwargs)
+        super(AWSClientException, self).__init__(
+            self.fmt.format(**kwargs), kwargs)
 
 
 class CurlNotInstalledError(Exception):
@@ -74,7 +74,7 @@ class NoProfileError(AWSClientException):
 class RequestException(AWSClientException):
     """Raised when a request failed due to a network issue.
 
-    :ivar error: The error which occured
+    :ivar error: The error which occurred
 
     """
     fmt = 'An error occured making a request {error}'
