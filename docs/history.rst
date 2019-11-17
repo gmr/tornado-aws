@@ -3,6 +3,10 @@
 Version History
 ===============
 
+1.6.0 (2019-11-17)
+------------------
+- Switch to http.client from tornado.httpclient.HTTPClient when querying the AWS region
+
 1.5.1 (2019-06-05)
 ------------------
 - Fix refreshing of local credentials on failure, streamline logic

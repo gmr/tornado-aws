@@ -6,6 +6,7 @@ try:
     import configparser
 except ImportError:  # pragma: no cover
     import ConfigParser as configparser
+import http.client
 import json
 import logging
 import os
@@ -25,6 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 DEFAULT_CREDENTIALS_PATH = '~/.aws/credentials'
 DEFAULT_REGION = 'us-east-1'
+INSTANCE_HOST = '169.254.169.254'
 INSTANCE_ENDPOINT = 'http://169.254.169.254/latest/{}'
 INSTANCE_ROLE_PATH = '/meta-data/iam/security-credentials/'
 INSTANCE_CREDENTIALS_PATH = '/meta-data/iam/security-credentials/{}'
@@ -53,7 +55,7 @@ def get_region(profile):
     except exceptions.ConfigNotFound:
         try:
             return _request_region_from_instance()
-        except (httpclient.HTTPError, OSError, socket.error) as error:
+        except (socket.error, socket.timeout, OSError) as error:
             LOGGER.error('Error fetching from EC2 Instance Metadata (%s)',
                          error)
             raise exceptions.ConfigNotFound(path=file_path)
@@ -114,11 +116,11 @@ def _request_region_from_instance():
     :rtype: str
 
     """
-    url = INSTANCE_ENDPOINT.format(REGION_PATH)
-    response = httpclient.HTTPClient().fetch(
-        url, connect_timeout=HTTP_TIMEOUT, request_timeout=HTTP_TIMEOUT)
-    data = json.loads(response.body.decode('utf-8'))
-    return data['region']
+    conn = http.client.HTTPConnection(INSTANCE_HOST, timeout=3)
+    conn.request('GET', INSTANCE_ENDPOINT.format(REGION_PATH),
+                 headers={'Accept': 'application/json'})
+    response = conn.getresponse()
+    return json.loads(response.read().decode('utf-8'))['region']
 
 
 class Authorization(object):
@@ -229,8 +231,7 @@ class Authorization(object):
                 self._ioloop.add_future(result, on_complete)
             else:
                 self._assign_credentials(result)
-        except (httpclient.HTTPError,
-                OSError) as error:
+        except (httpclient.HTTPError, OSError) as error:
             LOGGER.error('Error Fetching Credentials: %s', error)
             raise exceptions.NoCredentialsError
         return future
@@ -356,7 +357,6 @@ class Authorization(object):
     def _get_role(self):
         """Fetch the IAM role from the ECS Metadata and user data API
 
-        :param tornado.httpclient.HTTPClient client: The HTTP client
         :rtype: str
         :raises: tornado.httpclient.HTTPError
 
